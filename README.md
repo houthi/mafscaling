@@ -20,6 +20,8 @@ Load Compensation / Injector Pulse Width Compensation
 
 IAT Compensation
 
+Injector Tuning (scale and latency)
+
 MAF VE Calculation
 
 WOT best VVT
@@ -31,5 +33,17 @@ Log view, WOT comparison, and map tracing (replay)
 
 
 WIKI page - https://github.com/vimsh/mafscaling/wiki
+
+To build the executable JAR run:
+
+```
+ant jar
+```
+
+Then start the tool with:
+
+```
+java -jar MafScaling.jar
+```
 
 Thread on RomRaider - http://www.romraider.com/forum/viewtopic.php?t=10481
