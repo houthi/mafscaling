@@ -32,6 +32,8 @@ import javax.swing.JTabbedPane;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import com.vgi.mafscaling.Injector;
+
 import org.apache.log4j.Logger;
 
 public class MafScaling {
@@ -49,6 +51,7 @@ public class MafScaling {
     private static final String VCTabName = "<html>WOT Best VVT</html>";
     private static final String LSTabName = "<html>Log Stats</html>";
     private static final String LVTabName = "<html>Log View</html>";
+    private static final String INJTabName = "<html>Injector</html>";
     private JFrame frame;
 
     /**
@@ -152,6 +155,10 @@ public class MafScaling {
         JTabbedPane mi = new MafIatComp(JTabbedPane.LEFT, pofFuelingTable);
         mi.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.add(mi, MITabName);
+
+        JTabbedPane inj = new Injector(JTabbedPane.LEFT);
+        inj.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+        tabbedPane.add(inj, INJTabName);
         
         JTabbedPane ve = new VECalc(JTabbedPane.LEFT);
         ve.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
