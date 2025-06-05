@@ -45,6 +45,7 @@ public class MafScaling {
     private static final String TMTabName = "<html>Throttle Maps</html>";
     private static final String LCTabName = "<html>Load Comp</html>";
     private static final String MITabName = "<html>MAF IAT Comp</html>";
+    private static final String INJTabName = "<html>Injector</html>";
     private static final String VETabName = "<html>MAF VE Calc</html>";
     private static final String VCTabName = "<html>WOT Best VVT</html>";
     private static final String LSTabName = "<html>Log Stats</html>";
@@ -152,7 +153,11 @@ public class MafScaling {
         JTabbedPane mi = new MafIatComp(JTabbedPane.LEFT, pofFuelingTable);
         mi.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.add(mi, MITabName);
-        
+
+        JTabbedPane inj = new Injector(JTabbedPane.LEFT);
+        inj.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+        tabbedPane.add(inj, INJTabName);
+
         JTabbedPane ve = new VECalc(JTabbedPane.LEFT);
         ve.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.add(ve, VETabName);

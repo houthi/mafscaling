@@ -75,6 +75,8 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     public static final String iatLabelText = "Intake Air Temperature";
     public static final String ffbLabelText = "Final Fueling Base";
     public static final String veFlowLabelText = "VE Flow/VE Commanded";
+    public static final String battVoltLabelText = "Battery Voltage";
+    public static final String injPwLabelText = "Injector Pulse Width";
     public static final String thrtlChangeMaxLabelText = "Throttle Change % Maximum";
     public static final String minThrottleLabelText = "Throttle Input Minimum";
     public static final String isLoadCompInRatioLabelText = "Load Comp values are in ratio";
@@ -127,6 +129,8 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     protected JTextField iatName = null;
     protected JTextField ffbName = null;
     protected JTextField veFlowName = null;
+    protected JTextField battVoltName = null;
+    protected JTextField injPwName = null;
     protected JFormattedTextField minMafVFilter = null;
     protected JFormattedTextField maxMafVFilter = null;
     protected JFormattedTextField maxRPMFilter = null;
@@ -480,6 +484,22 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         veFlowName.setDragEnabled(true);
         veFlowName.setTransferHandler(textTransferHandler);
         addCopyButton(colrow, "veflow");
+    }
+
+    protected void addBatteryVoltageColSelection() {
+        addLabel(columnsPanel, ++colrow, battVoltLabelText);
+        battVoltName = addColumn(colrow, Config.getBatteryVoltageColumnName());
+        battVoltName.setDragEnabled(true);
+        battVoltName.setTransferHandler(textTransferHandler);
+        addCopyButton(colrow, "battvolt");
+    }
+
+    protected void addInjectorPulseWidthColSelection() {
+        addLabel(columnsPanel, ++colrow, injPwLabelText);
+        injPwName = addColumn(colrow, Config.getInjectorPulseWidthColumnName());
+        injPwName.setDragEnabled(true);
+        injPwName.setTransferHandler(textTransferHandler);
+        addCopyButton(colrow, "injpw");
     }
 
     protected void createFiltersPanel() {
