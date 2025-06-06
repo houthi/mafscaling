@@ -115,9 +115,10 @@ public class Injector extends ACompCalc {
 
     protected void createDataTables(JPanel panel) {
         // scaling tables on the left
-        scaleOrigTable = createDataTable(panel, scaleOrigTableName, 1, 2, 0, 0, true, false, false);
-        scaleNewTable = createDataTable(panel, scaleNewTableName, 1, 2, 0, 2, false, false, false);
-        scaleCorrTable = createDataTable(panel, scaleCorrTableName, 1, 2, 0, 4, false, false, false);
+        // injector scale is a single cell without headers
+        scaleOrigTable = createDataTable(panel, scaleOrigTableName, 1, 1, 0, 0, true, false, false);
+        scaleNewTable = createDataTable(panel, scaleNewTableName, 1, 1, 0, 2, false, false, false);
+        scaleCorrTable = createDataTable(panel, scaleCorrTableName, 1, 1, 0, 4, false, false, false);
         corrCountTable = scaleCorrTable;
 
         // latency tables on the right
@@ -127,7 +128,11 @@ public class Injector extends ACompCalc {
     }
 
     protected void formatTable(JTable table) {
-        Format[][] formatMatrix = { { new DecimalFormat("0.00"), new DecimalFormat("0.000") } };
+        Format[][] formatMatrix;
+        if (table == scaleOrigTable || table == scaleNewTable || table == scaleCorrTable)
+            formatMatrix = new Format[][] { { new DecimalFormat("0.00000") } };
+        else
+            formatMatrix = new Format[][] { { new DecimalFormat("0.00"), new DecimalFormat("0.000") } };
         NumberFormatRenderer renderer = (NumberFormatRenderer)table.getDefaultRenderer(Object.class);
         renderer.setFormats(formatMatrix);
     }
@@ -148,9 +153,9 @@ public class Injector extends ACompCalc {
         if (table == origTable)
             table.setModel(new DefaultTableModel(TableRowCount, TableRowCount));
         else if (table == scaleOrigTable)
-            table.setModel(new DefaultTableModel(2, 1));
+            table.setModel(new DefaultTableModel(1, 1));
         else if (table == scaleNewTable || table == scaleCorrTable)
-            table.setModel(new DefaultTableModel(2, 1));
+            table.setModel(new DefaultTableModel(1, 1));
         else
             table.setModel(new DefaultTableModel(origTable.getRowCount(), origTable.getColumnCount()));
         Utils.initializeTable(table, ColumnWidth);
@@ -162,6 +167,12 @@ public class Injector extends ACompCalc {
         if (scaleOrigTable != null)
             clearRunTable(scaleOrigTable);
         clearRunTables();
+    }
+
+    protected boolean validateTable(JTable table) {
+        if (table == scaleOrigTable || table == scaleNewTable || table == scaleCorrTable)
+            return true;
+        return super.validateTable(table);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -300,6 +311,8 @@ public class Injector extends ACompCalc {
 
     protected boolean displayData() {
         try {
+            newTable.setValueAt(origTable.getValueAt(0, 0), 0, 0);
+            corrTable.setValueAt(origTable.getValueAt(0, 0), 0, 0);
             for (int i = 1; i < origTable.getColumnCount(); ++i) {
                 newTable.setValueAt(origTable.getValueAt(0, i), 0, i);
                 corrTable.setValueAt(origTable.getValueAt(0, i), 0, i);
@@ -327,12 +340,12 @@ public class Injector extends ACompCalc {
             }
             Utils.colorTable(newTable);
 
-            String scaleStr = scaleOrigTable.getValueAt(1, 0).toString();
+            String scaleStr = scaleOrigTable.getValueAt(0, 0).toString();
             double scale = scaleStr.isEmpty() ? 0 : Double.parseDouble(scaleStr);
             double newScale = scale * (1 + meanErr / 100.0);
             double corrScale = newScale - scale;
-            scaleNewTable.setValueAt(String.format("%.5f", newScale), 1, 0);
-            corrCountTable.setValueAt(String.format("%.5f", corrScale), 1, 0);
+            scaleNewTable.setValueAt(String.format("%.5f", newScale), 0, 0);
+            corrCountTable.setValueAt(String.format("%.5f", corrScale), 0, 0);
 
             plotRel2dChartData(voltAxisName, voltList, errAxisName, errList);
             return true;
