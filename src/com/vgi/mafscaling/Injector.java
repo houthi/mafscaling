@@ -16,9 +16,7 @@ import java.text.DecimalFormat;
 import java.text.Format;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.ResourceBundle;
 
 import javax.swing.JFileChooser;
@@ -59,8 +57,8 @@ public class Injector extends ACompCalc {
     private int thrtlMaxChange = Config.getThrottleChangeMaxValue();
 
     private String[] logColumns = new String[] { voltAxisName, "PW", errAxisName };
-    private Map<Double, List<Double>> voltErr = null;
-    private Map<Double, List<Double>> voltPw = null;
+    private double[] deltaSum = null;
+    private double[] weightSum = null;
     private ArrayList<Double> voltList = new ArrayList<Double>();
     private ArrayList<Double> errList = new ArrayList<Double>();
     private double meanErr = 0;
@@ -313,40 +311,77 @@ public class Injector extends ACompCalc {
 
     protected boolean processLog() {
         try {
-            voltErr = new HashMap<Double, List<Double>>();
-            voltPw = new HashMap<Double, List<Double>>();
+            int cols = xAxisArray.size();
+            deltaSum = new double[cols];
+            weightSum = new double[cols];
             voltList.clear();
             errList.clear();
             meanErr = 0;
             int cnt = 0;
+
             for (int i = 0; i < logDataTable.getRowCount(); ++i) {
                 Object vObj = logDataTable.getValueAt(i, 0);
                 Object pwObj = logDataTable.getValueAt(i, 1);
                 Object eObj = logDataTable.getValueAt(i, 2);
                 if (vObj == null || pwObj == null || eObj == null)
                     continue;
+
                 String vStr = vObj.toString();
                 String pwStr = pwObj.toString();
                 String eStr = eObj.toString();
                 if (vStr.isEmpty() || pwStr.isEmpty() || eStr.isEmpty())
                     continue;
+
                 double v = Double.valueOf(vStr);
                 double pw = Double.valueOf(pwStr);
                 double err = Double.valueOf(eStr);
+
                 voltList.add(v);
                 errList.add(err);
-                double bin = xAxisArray.get(Utils.closestValueIndex(v, xAxisArray));
-                List<Double> l = voltErr.get(bin);
-                if (l == null) { l = new ArrayList<Double>(); voltErr.put(bin, l); }
-                l.add(err);
-                l = voltPw.get(bin);
-                if (l == null) { l = new ArrayList<Double>(); voltPw.put(bin, l); }
-                l.add(pw);
+
+                int highIdx;
+                int lowIdx;
+                double w;
+                if (v <= xAxisArray.get(0)) {
+                    lowIdx = highIdx = 0;
+                    w = 0.0;
+                } else if (v >= xAxisArray.get(cols - 1)) {
+                    lowIdx = highIdx = cols - 1;
+                    w = 0.0;
+                } else {
+                    highIdx = 1;
+                    while (highIdx < cols && xAxisArray.get(highIdx) < v)
+                        highIdx++;
+                    lowIdx = highIdx - 1;
+                    double vLow = xAxisArray.get(lowIdx);
+                    double vHigh = xAxisArray.get(highIdx);
+                    w = (v - vLow) / (vHigh - vLow);
+                }
+
+                String lowStr = origTable.getValueAt(1, lowIdx + 1).toString();
+                String highStr = origTable.getValueAt(1, highIdx + 1).toString();
+                double lLow = lowStr.isEmpty() ? 0 : Double.valueOf(lowStr);
+                double lHigh = highStr.isEmpty() ? 0 : Double.valueOf(highStr);
+                double lInterp = lLow + w * (lHigh - lLow);
+
+                double delta = (err / 100.0) * (pw - lInterp);
+
+                double wLow = 1.0 - w;
+                double wHigh = w;
+                deltaSum[lowIdx] += wLow * delta;
+                weightSum[lowIdx] += wLow;
+                if (highIdx != lowIdx) {
+                    deltaSum[highIdx] += wHigh * delta;
+                    weightSum[highIdx] += wHigh;
+                }
+
                 meanErr += err;
                 cnt++;
             }
+
             if (cnt > 0)
                 meanErr /= cnt;
+
             return true;
         }
         catch (Exception e) {
@@ -368,16 +403,13 @@ public class Injector extends ACompCalc {
                 newTable.setValueAt(origTable.getValueAt(j, 0), j, 0);
                 corrTable.setValueAt(origTable.getValueAt(j, 0), j, 0);
             }
+
             for (int i = 1; i < xAxisArray.size() + 1; ++i) {
-                double volt = xAxisArray.get(i - 1);
                 String valStr = origTable.getValueAt(1, i).toString();
                 double lat = valStr.isEmpty() ? 0 : Double.valueOf(valStr);
-                List<Double> errs = voltErr.get(volt);
-                List<Double> pws = voltPw.get(volt);
-                if (errs != null && pws != null && errs.size() > 0) {
-                    double err = Utils.mean(errs);
-                    double pw = Utils.mean(pws);
-                    double delta = -(err / 100.0) * pw;
+                int idx = i - 1;
+                if (weightSum != null && idx < weightSum.length && weightSum[idx] > 0) {
+                    double delta = deltaSum[idx] / weightSum[idx];
                     newTable.setValueAt(String.format("%.3f", lat + delta), 1, i);
                     corrTable.setValueAt(String.format("%.3f", delta), 1, i);
                 } else {
