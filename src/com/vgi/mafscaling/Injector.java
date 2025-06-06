@@ -26,6 +26,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
 
 import org.apache.log4j.Logger;
 
@@ -59,12 +60,23 @@ public class Injector extends ACompCalc {
     private ArrayList<Double> errList = new ArrayList<Double>();
     private double meanErr = 0;
 
+    private JTable scaleOrigTable = null;
+    private JTable scaleNewTable = null;
+    private JTable scaleCorrTable = null;
+
+    private String scaleOrigTableName;
+    private String scaleNewTableName;
+    private String scaleCorrTableName;
+
     public Injector(int tabPlacement) {
         super(tabPlacement);
         origTableName = "Current Injector Latency";
         newTableName = "New Injector Latency";
         corrTableName = "Latency Correction";
-        corrCountTableName = "Injector Scale";
+        scaleOrigTableName = "Current Injector Scale";
+        scaleNewTableName = "New Injector Scale";
+        scaleCorrTableName = "Scale Correction";
+        corrCountTableName = scaleCorrTableName;
         x3dAxisName = voltAxisName;
         y3dAxisName = errAxisName;
         z3dAxisName = "";
@@ -102,16 +114,54 @@ public class Injector extends ACompCalc {
     }
 
     protected void createDataTables(JPanel panel) {
-        origTable = createDataTable(panel, origTableName, 12, 2, 0, 0, true, true, true);
-        newTable = createDataTable(panel, newTableName, 12, 2, 0, 2, false, true, true);
-        corrTable = createDataTable(panel, corrTableName, 12, 2, 0, 4, false, true, true);
-        corrCountTable = createDataTable(panel, corrCountTableName, 1, 2, 0, 6, false, false, false);
+        // scaling tables on the left
+        scaleOrigTable = createDataTable(panel, scaleOrigTableName, 1, 2, 0, 0, true, false, false);
+        scaleNewTable = createDataTable(panel, scaleNewTableName, 1, 2, 0, 2, false, false, false);
+        scaleCorrTable = createDataTable(panel, scaleCorrTableName, 1, 2, 0, 4, false, false, false);
+        corrCountTable = scaleCorrTable;
+
+        // latency tables on the right
+        origTable = createDataTable(panel, origTableName, 12, 2, 1, 0, true, true, true);
+        newTable = createDataTable(panel, newTableName, 12, 2, 1, 2, false, true, true);
+        corrTable = createDataTable(panel, corrTableName, 12, 2, 1, 4, false, true, true);
     }
 
     protected void formatTable(JTable table) {
         Format[][] formatMatrix = { { new DecimalFormat("0.00"), new DecimalFormat("0.000") } };
         NumberFormatRenderer renderer = (NumberFormatRenderer)table.getDefaultRenderer(Object.class);
         renderer.setFormats(formatMatrix);
+    }
+
+    protected void clearRunTables() {
+        clearRunTable(newTable);
+        clearRunTable(corrTable);
+        if (scaleNewTable != null)
+            clearRunTable(scaleNewTable);
+        if (scaleCorrTable != null)
+            clearRunTable(scaleCorrTable);
+        savedNewTable.clear();
+        if (compareTableCheckBox != null)
+            compareTableCheckBox.setSelected(false);
+    }
+
+    protected void clearRunTable(JTable table) {
+        if (table == origTable)
+            table.setModel(new DefaultTableModel(TableRowCount, TableRowCount));
+        else if (table == scaleOrigTable)
+            table.setModel(new DefaultTableModel(2, 1));
+        else if (table == scaleNewTable || table == scaleCorrTable)
+            table.setModel(new DefaultTableModel(2, 1));
+        else
+            table.setModel(new DefaultTableModel(origTable.getRowCount(), origTable.getColumnCount()));
+        Utils.initializeTable(table, ColumnWidth);
+        formatTable(table);
+    }
+
+    protected void clearTables() {
+        clearRunTable(origTable);
+        if (scaleOrigTable != null)
+            clearRunTable(scaleOrigTable);
+        clearRunTables();
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -276,7 +326,14 @@ public class Injector extends ACompCalc {
                 }
             }
             Utils.colorTable(newTable);
-            corrCountTable.setValueAt(String.format("%.5f", 1 + meanErr / 100.0), 1, 0);
+
+            String scaleStr = scaleOrigTable.getValueAt(1, 0).toString();
+            double scale = scaleStr.isEmpty() ? 0 : Double.parseDouble(scaleStr);
+            double newScale = scale * (1 + meanErr / 100.0);
+            double corrScale = newScale - scale;
+            scaleNewTable.setValueAt(String.format("%.5f", newScale), 1, 0);
+            corrCountTable.setValueAt(String.format("%.5f", corrScale), 1, 0);
+
             plotRel2dChartData(voltAxisName, voltList, errAxisName, errList);
             return true;
         }
