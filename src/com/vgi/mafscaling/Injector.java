@@ -64,7 +64,7 @@ public class Injector extends ACompCalc {
         origTableName = "Current Injector Latency";
         newTableName = "New Injector Latency";
         corrTableName = "Latency Correction";
-        corrCountTableName = "Scale Factor";
+        corrCountTableName = "Injector Scale";
         x3dAxisName = voltAxisName;
         y3dAxisName = errAxisName;
         z3dAxisName = "";
@@ -103,9 +103,9 @@ public class Injector extends ACompCalc {
 
     protected void createDataTables(JPanel panel) {
         origTable = createDataTable(panel, origTableName, 12, 2, 0, 0, true, true, true);
-        newTable = createDataTable(panel, newTableName, 12, 2, 2, 0, false, true, true);
-        corrTable = createDataTable(panel, corrTableName, 12, 2, 4, 0, false, true, true);
-        corrCountTable = createDataTable(panel, corrCountTableName, 1, 2, 6, 0, false, false, false);
+        newTable = createDataTable(panel, newTableName, 12, 2, 0, 2, false, true, true);
+        corrTable = createDataTable(panel, corrTableName, 12, 2, 0, 4, false, true, true);
+        corrCountTable = createDataTable(panel, corrCountTableName, 1, 2, 0, 6, false, false, false);
     }
 
     protected void formatTable(JTable table) {

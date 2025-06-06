@@ -955,6 +955,10 @@ abstract class ColumnsFiltersSelection implements ActionListener {
             textField = vvt2Name;
         else if ("map".equals(e.getActionCommand()))
             textField = mapName;
+        else if ("battvolt".equals(e.getActionCommand()))
+            textField = batteryVoltageName;
+        else if ("injpw".equals(e.getActionCommand()))
+            textField = injectorPWName;
         else
             return;
         textField.setText(value);
