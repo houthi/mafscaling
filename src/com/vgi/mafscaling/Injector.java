@@ -48,10 +48,15 @@ public class Injector extends ACompCalc {
     private int logLtftIdx = -1;
     private int logVoltIdx = -1;
     private int logPwIdx = -1;
+    private int logThrottleIdx = -1;
+    private int logTimeIdx = -1;
+    private int logMafVIdx = -1;
 
     private double rpmMin = Config.getRPMMinimumValue();
     private double rpmMax = Config.getRPMMaximumValue();
     private double loadMin = Config.getLoadMinimumValue();
+    private double dvDtMax = Config.getDvDtMaximumValue();
+    private int thrtlMaxChange = Config.getThrottleChangeMaxValue();
 
     private String[] logColumns = new String[] { voltAxisName, "PW", errAxisName };
     private Map<Double, List<Double>> voltErr = null;
@@ -228,28 +233,70 @@ public class Injector extends ACompCalc {
                 logLtftIdx = colList.indexOf(Config.getAfLearningColumnName());
                 logVoltIdx = colList.indexOf(Config.getBatteryVoltageColumnName());
                 logPwIdx = colList.indexOf(Config.getInjectorPulseWidthColumnName());
+                logThrottleIdx = colList.indexOf(Config.getThrottleAngleColumnName());
+                logTimeIdx = colList.indexOf(Config.getTimeColumnName());
+                logMafVIdx = colList.indexOf(Config.getMafVoltageColumnName());
                 String line;
                 int row = getLogTableEmptyRow();
+                long time = 0;
+                long prevTime = 0;
+                double throttle = 0;
+                double pThrottle = 0;
+                double ppThrottle = 0;
+                double mafv = 0;
+                double pmafv = 0;
+                double dVdt = 0;
+                double thrtlMaxChange2 = thrtlMaxChange * 2.0;
+                boolean removed = false;
                 while ((line = br.readLine()) != null) {
                     String[] flds = line.trim().split(Utils.fileFieldSplitter, -1);
-                    if (flds.length <= Math.max(logPwIdx, logVoltIdx))
+                    if (flds.length <= Math.max(Math.max(logPwIdx, logVoltIdx), Math.max(logMafVIdx, logTimeIdx)))
                         continue;
-                    double rpm = Utils.parseValue(flds[logRpmIdx]);
-                    if (rpm < rpmMin || rpm > rpmMax)
-                        continue;
-                    double load = Utils.parseValue(flds[logLoadIdx]);
-                    if (load < loadMin)
-                        continue;
-                    double stft = Utils.parseValue(flds[logStftIdx]);
-                    double ltft = Utils.parseValue(flds[logLtftIdx]);
-                    double err = stft + ltft;
-                    double volt = Utils.parseValue(flds[logVoltIdx]);
-                    double pw = Utils.parseValue(flds[logPwIdx]);
-                    Utils.ensureRowCount(row + 1, logDataTable);
-                    logDataTable.setValueAt(volt, row, 0);
-                    logDataTable.setValueAt(pw, row, 1);
-                    logDataTable.setValueAt(err, row, 2);
-                    row += 1;
+                    ppThrottle = pThrottle;
+                    pThrottle = throttle;
+                    try {
+                        throttle = Double.valueOf(flds[logThrottleIdx]);
+                        prevTime = time;
+                        if (prevTime == 0)
+                            Utils.resetBaseTime(flds[logTimeIdx]);
+                        time = Utils.parseTime(flds[logTimeIdx]);
+                        pmafv = mafv;
+                        mafv = Double.valueOf(flds[logMafVIdx]);
+                        if ((time - prevTime) == 0.0)
+                            dVdt = 100.0;
+                        else
+                            dVdt = Math.abs(((mafv - pmafv) / (time - prevTime)) * 1000.0);
+                        if (row > 1 && Math.abs(pThrottle - throttle) > thrtlMaxChange) {
+                            if (!removed)
+                                Utils.removeRow(row--, logDataTable);
+                            removed = true;
+                        }
+                        else if (row <= 2 || Math.abs(ppThrottle - throttle) <= thrtlMaxChange2) {
+                            double rpm = Utils.parseValue(flds[logRpmIdx]);
+                            if (rpm < rpmMin || rpm > rpmMax) { removed = true; continue; }
+                            double load = Utils.parseValue(flds[logLoadIdx]);
+                            if (load < loadMin) { removed = true; continue; }
+                            if (dVdt > dvDtMax) { removed = true; continue; }
+                            double stft = Utils.parseValue(flds[logStftIdx]);
+                            double ltft = Utils.parseValue(flds[logLtftIdx]);
+                            double err = stft + ltft;
+                            double volt = Utils.parseValue(flds[logVoltIdx]);
+                            double pw = Utils.parseValue(flds[logPwIdx]);
+                            removed = false;
+                            Utils.ensureRowCount(row + 1, logDataTable);
+                            logDataTable.setValueAt(volt, row, 0);
+                            logDataTable.setValueAt(pw, row, 1);
+                            logDataTable.setValueAt(err, row, 2);
+                            row += 1;
+                        }
+                        else
+                            removed = true;
+                    }
+                    catch (NumberFormatException e) {
+                        logger.error(e);
+                        JOptionPane.showMessageDialog(this, "Error parsing number at " + file.getName(), "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
                 }
             }
             catch (Exception e) {
@@ -338,6 +385,7 @@ public class Injector extends ACompCalc {
                     corrTable.setValueAt("", 1, i);
                 }
             }
+            corrTable.setValueAt("", 1, 0);
             Utils.colorTable(newTable);
 
             String scaleStr = scaleOrigTable.getValueAt(0, 0).toString();
