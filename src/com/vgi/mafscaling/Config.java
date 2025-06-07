@@ -202,6 +202,22 @@ public class Config {
         props.setProperty("VEFlowColumnName", name);
     }
 
+    public static String getBatteryVoltageColumnName() {
+        return props.getProperty("BatteryVoltageColumnName", NO_NAME);
+    }
+
+    public static void setBatteryVoltageColumnName(String name) {
+        props.setProperty("BatteryVoltageColumnName", name);
+    }
+
+    public static String getInjectorPulseWidthColumnName() {
+        return props.getProperty("InjectorPulseWidthColumnName", NO_NAME);
+    }
+
+    public static void setInjectorPulseWidthColumnName(String name) {
+        props.setProperty("InjectorPulseWidthColumnName", name);
+    }
+
     public static String getWidebandAfrColumnName() {
         return props.getProperty("WidebandAfrColumnName", NO_NAME);
     }

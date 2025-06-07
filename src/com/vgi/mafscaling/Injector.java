@@ -1,0 +1,451 @@
+/*
+* Open-Source tuning tools
+*/
+package com.vgi.mafscaling;
+
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.DecimalFormat;
+import java.text.Format;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ResourceBundle;
+
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+
+import org.apache.log4j.Logger;
+
+/**
+ * Simple injector tuning tab. Allows pasting current injector latency table,
+ * loading log files and calculating latency correction per voltage as well as
+ * overall injector scale factor.
+ */
+public class Injector extends ACompCalc {
+    private static final long serialVersionUID = 1L;
+    private static final Logger logger = Logger.getLogger(Injector.class);
+
+    private static final String voltAxisName = "Voltage";
+    private static final String errAxisName = "Fueling Error %";
+
+    private int logRpmIdx = -1;
+    private int logLoadIdx = -1;
+    private int logStftIdx = -1;
+    private int logLtftIdx = -1;
+    private int logVoltIdx = -1;
+    private int logPwIdx = -1;
+    private int logThrottleIdx = -1;
+    private int logTimeIdx = -1;
+    private int logMafVIdx = -1;
+
+    private double rpmMin = Config.getRPMMinimumValue();
+    private double rpmMax = Config.getRPMMaximumValue();
+    private double loadMin = Config.getLoadMinimumValue();
+    private double dvDtMax = Config.getDvDtMaximumValue();
+    private int thrtlMaxChange = Config.getThrottleChangeMaxValue();
+
+    private String[] logColumns = new String[] { voltAxisName, "PW", errAxisName };
+    private double[] deltaSum = null;
+    private double[] weightSum = null;
+    private ArrayList<Double> voltList = new ArrayList<Double>();
+    private ArrayList<Double> errList = new ArrayList<Double>();
+    private double meanErr = 0;
+
+    private JTable scaleOrigTable = null;
+    private JTable scaleNewTable = null;
+    private JTable scaleCorrTable = null;
+
+    private String scaleOrigTableName;
+    private String scaleNewTableName;
+    private String scaleCorrTableName;
+
+    public Injector(int tabPlacement) {
+        super(tabPlacement);
+        origTableName = "Current Injector Latency";
+        newTableName = "New Injector Latency";
+        corrTableName = "Latency Correction";
+        scaleOrigTableName = "Current Injector Scale";
+        scaleNewTableName = "New Injector Scale";
+        scaleCorrTableName = "Scale Correction";
+        corrCountTableName = scaleCorrTableName;
+        x3dAxisName = voltAxisName;
+        y3dAxisName = errAxisName;
+        z3dAxisName = "";
+        initialize(logColumns);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // DATA TAB
+    ////////////////////////////////////////////////////////////////////////////
+
+    protected void createControlPanel(JPanel dataPanel) {
+        JPanel cntlPanel = new JPanel();
+        GridBagConstraints gbl_ctrlPanel = new GridBagConstraints();
+        gbl_ctrlPanel.insets = insets3;
+        gbl_ctrlPanel.anchor = GridBagConstraints.NORTH;
+        gbl_ctrlPanel.fill = GridBagConstraints.HORIZONTAL;
+        gbl_ctrlPanel.gridx = 0;
+        gbl_ctrlPanel.gridy = 0;
+        gbl_ctrlPanel.weightx = 1.0;
+        gbl_ctrlPanel.gridwidth = 2;
+        dataPanel.add(cntlPanel, gbl_ctrlPanel);
+
+        GridBagLayout gbl_cntlPanel = new GridBagLayout();
+        gbl_cntlPanel.columnWidths = new int[]{0,0,0,0,0};
+        gbl_cntlPanel.rowHeights = new int[]{0};
+        gbl_cntlPanel.columnWeights = new double[]{0.0,0.0,0.0,0.0,1.0};
+        gbl_cntlPanel.rowWeights = new double[]{0};
+        cntlPanel.setLayout(gbl_cntlPanel);
+
+        addButton(cntlPanel, 0, "Load Log", "loadlog", GridBagConstraints.WEST);
+        addButton(cntlPanel, 1, "Clear Run Data", "clearlog", GridBagConstraints.WEST);
+        addButton(cntlPanel, 2, "Clear All", "clearall", GridBagConstraints.WEST);
+        addCheckBox(cntlPanel, 3, "Hide Log Table", "hidelogtable");
+        addButton(cntlPanel, 4, "GO", "go", GridBagConstraints.EAST);
+    }
+
+    protected void createDataTables(JPanel panel) {
+        // scaling tables on the left
+        // injector scale is a single cell without headers
+        scaleOrigTable = createDataTable(panel, scaleOrigTableName, 1, 1, 0, 0, true, false, false);
+        scaleNewTable = createDataTable(panel, scaleNewTableName, 1, 1, 0, 2, false, false, false);
+        scaleCorrTable = createDataTable(panel, scaleCorrTableName, 1, 1, 0, 4, false, false, false);
+        corrCountTable = scaleCorrTable;
+
+        // latency tables on the right
+        origTable = createDataTable(panel, origTableName, 12, 2, 1, 0, true, true, true);
+        newTable = createDataTable(panel, newTableName, 12, 2, 1, 2, false, true, true);
+        corrTable = createDataTable(panel, corrTableName, 12, 2, 1, 4, false, true, true);
+    }
+
+    protected void formatTable(JTable table) {
+        Format[][] formatMatrix;
+        if (table == scaleOrigTable || table == scaleNewTable || table == scaleCorrTable)
+            formatMatrix = new Format[][] { { new DecimalFormat("0.00000") } };
+        else
+            formatMatrix = new Format[][] { { new DecimalFormat("0.00"), new DecimalFormat("0.000") } };
+        NumberFormatRenderer renderer = (NumberFormatRenderer)table.getDefaultRenderer(Object.class);
+        renderer.setFormats(formatMatrix);
+    }
+
+    protected void clearRunTables() {
+        clearRunTable(newTable);
+        clearRunTable(corrTable);
+        if (scaleNewTable != null)
+            clearRunTable(scaleNewTable);
+        if (scaleCorrTable != null)
+            clearRunTable(scaleCorrTable);
+        savedNewTable.clear();
+        if (compareTableCheckBox != null)
+            compareTableCheckBox.setSelected(false);
+    }
+
+    protected void clearRunTable(JTable table) {
+        if (table == origTable)
+            table.setModel(new DefaultTableModel(TableRowCount, TableRowCount));
+        else if (table == scaleOrigTable)
+            table.setModel(new DefaultTableModel(1, 1));
+        else if (table == scaleNewTable || table == scaleCorrTable)
+            table.setModel(new DefaultTableModel(1, 1));
+        else
+            table.setModel(new DefaultTableModel(origTable.getRowCount(), origTable.getColumnCount()));
+        Utils.initializeTable(table, ColumnWidth);
+        formatTable(table);
+    }
+
+    protected void clearTables() {
+        clearRunTable(origTable);
+        if (scaleOrigTable != null)
+            clearRunTable(scaleOrigTable);
+        clearRunTables();
+    }
+
+    protected boolean validateTable(JTable table) {
+        if (table == scaleOrigTable || table == scaleNewTable || table == scaleCorrTable)
+            return true;
+        return super.validateTable(table);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // CHART TAB
+    ////////////////////////////////////////////////////////////////////////////
+
+    protected void createGraphTab() {
+        JPanel plotPanel = new JPanel();
+        add(plotPanel, "<html><div style='text-align: center;'>C<br>h<br>a<br>r<br>t</div></html>");
+        GridBagLayout gbl_plotPanel = new GridBagLayout();
+        gbl_plotPanel.columnWidths = new int[] {0};
+        gbl_plotPanel.rowHeights = new int[] {0};
+        gbl_plotPanel.columnWeights = new double[]{1.0};
+        gbl_plotPanel.rowWeights = new double[]{1.0};
+        plotPanel.setLayout(gbl_plotPanel);
+        createChart(plotPanel, voltAxisName, errAxisName);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // USAGE TAB
+    ////////////////////////////////////////////////////////////////////////////
+
+    protected String usage() {
+        ResourceBundle bundle = ResourceBundle.getBundle("com.vgi.mafscaling.injector");
+        return bundle.getString("usage");
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // LOG LOADING AND PROCESSING
+    ////////////////////////////////////////////////////////////////////////////
+
+    protected void loadLogFile() {
+        fileChooser.setMultiSelectionEnabled(true);
+        if (JFileChooser.APPROVE_OPTION != fileChooser.showOpenDialog(this))
+            return;
+        File[] files = fileChooser.getSelectedFiles();
+        clearLogDataTables();
+        for (File file : files) {
+            BufferedReader br = null;
+            try {
+                br = new BufferedReader(new InputStreamReader(new FileInputStream(file.getAbsoluteFile()), Config.getEncoding()));
+                String header = br.readLine();
+                if (header == null)
+                    continue;
+                String[] cols = header.trim().split(Utils.fileFieldSplitter, -1);
+                InjectorColumnsFiltersSelection sel = new InjectorColumnsFiltersSelection();
+                if (!sel.getUserSettings(cols))
+                    return;
+                List<String> colList = Arrays.asList(cols);
+                logRpmIdx = colList.indexOf(Config.getRpmColumnName());
+                logLoadIdx = colList.indexOf(Config.getLoadColumnName());
+                logStftIdx = colList.indexOf(Config.getAfCorrectionColumnName());
+                logLtftIdx = colList.indexOf(Config.getAfLearningColumnName());
+                logVoltIdx = colList.indexOf(Config.getBatteryVoltageColumnName());
+                logPwIdx = colList.indexOf(Config.getInjectorPulseWidthColumnName());
+                logThrottleIdx = colList.indexOf(Config.getThrottleAngleColumnName());
+                logTimeIdx = colList.indexOf(Config.getTimeColumnName());
+                logMafVIdx = colList.indexOf(Config.getMafVoltageColumnName());
+                String line;
+                int row = getLogTableEmptyRow();
+                long time = 0;
+                long prevTime = 0;
+                double throttle = 0;
+                double pThrottle = 0;
+                double ppThrottle = 0;
+                double mafv = 0;
+                double pmafv = 0;
+                double dVdt = 0;
+                double thrtlMaxChange2 = thrtlMaxChange * 2.0;
+                boolean removed = false;
+                while ((line = br.readLine()) != null) {
+                    String[] flds = line.trim().split(Utils.fileFieldSplitter, -1);
+                    if (flds.length <= Math.max(Math.max(logPwIdx, logVoltIdx), Math.max(logMafVIdx, logTimeIdx)))
+                        continue;
+                    ppThrottle = pThrottle;
+                    pThrottle = throttle;
+                    try {
+                        throttle = Double.valueOf(flds[logThrottleIdx]);
+                        prevTime = time;
+                        if (prevTime == 0)
+                            Utils.resetBaseTime(flds[logTimeIdx]);
+                        time = Utils.parseTime(flds[logTimeIdx]);
+                        pmafv = mafv;
+                        mafv = Double.valueOf(flds[logMafVIdx]);
+                        if ((time - prevTime) == 0.0)
+                            dVdt = 100.0;
+                        else
+                            dVdt = Math.abs(((mafv - pmafv) / (time - prevTime)) * 1000.0);
+                        if (row > 1 && Math.abs(pThrottle - throttle) > thrtlMaxChange) {
+                            if (!removed)
+                                Utils.removeRow(row--, logDataTable);
+                            removed = true;
+                        }
+                        else if (row <= 2 || Math.abs(ppThrottle - throttle) <= thrtlMaxChange2) {
+                            double rpm = Utils.parseValue(flds[logRpmIdx]);
+                            if (rpm < rpmMin || rpm > rpmMax) { removed = true; continue; }
+                            double load = Utils.parseValue(flds[logLoadIdx]);
+                            if (load < loadMin) { removed = true; continue; }
+                            if (dVdt > dvDtMax) { removed = true; continue; }
+                            double stft = Utils.parseValue(flds[logStftIdx]);
+                            double ltft = Utils.parseValue(flds[logLtftIdx]);
+                            double err = stft + ltft;
+                            double volt = Utils.parseValue(flds[logVoltIdx]);
+                            double pw = Utils.parseValue(flds[logPwIdx]);
+                            removed = false;
+                            Utils.ensureRowCount(row + 1, logDataTable);
+                            logDataTable.setValueAt(volt, row, 0);
+                            logDataTable.setValueAt(pw, row, 1);
+                            logDataTable.setValueAt(err, row, 2);
+                            row += 1;
+                        }
+                        else
+                            removed = true;
+                    }
+                    catch (NumberFormatException e) {
+                        logger.error(e);
+                        JOptionPane.showMessageDialog(this, "Error parsing number at " + file.getName(), "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
+            }
+            catch (Exception e) {
+                logger.error(e);
+                JOptionPane.showMessageDialog(this, e.toString(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            finally {
+                if (br != null) {
+                    try { br.close(); } catch (IOException e) { logger.error(e); }
+                }
+            }
+        }
+    }
+
+    protected boolean processLog() {
+        try {
+            int cols = xAxisArray.size();
+            deltaSum = new double[cols];
+            weightSum = new double[cols];
+            voltList.clear();
+            errList.clear();
+            meanErr = 0;
+            int cnt = 0;
+
+            for (int i = 0; i < logDataTable.getRowCount(); ++i) {
+                Object vObj = logDataTable.getValueAt(i, 0);
+                Object pwObj = logDataTable.getValueAt(i, 1);
+                Object eObj = logDataTable.getValueAt(i, 2);
+                if (vObj == null || pwObj == null || eObj == null)
+                    continue;
+
+                String vStr = vObj.toString();
+                String pwStr = pwObj.toString();
+                String eStr = eObj.toString();
+                if (vStr.isEmpty() || pwStr.isEmpty() || eStr.isEmpty())
+                    continue;
+
+                double v = Double.valueOf(vStr);
+                double pw = Double.valueOf(pwStr);
+                double err = Double.valueOf(eStr);
+
+                voltList.add(v);
+                errList.add(err);
+
+                int highIdx;
+                int lowIdx;
+                double w;
+                if (v <= xAxisArray.get(0)) {
+                    lowIdx = highIdx = 0;
+                    w = 0.0;
+                } else if (v >= xAxisArray.get(cols - 1)) {
+                    lowIdx = highIdx = cols - 1;
+                    w = 0.0;
+                } else {
+                    highIdx = 1;
+                    while (highIdx < cols && xAxisArray.get(highIdx) < v)
+                        highIdx++;
+                    lowIdx = highIdx - 1;
+                    double vLow = xAxisArray.get(lowIdx);
+                    double vHigh = xAxisArray.get(highIdx);
+                    w = (v - vLow) / (vHigh - vLow);
+                }
+
+                String lowStr = origTable.getValueAt(1, lowIdx + 1).toString();
+                String highStr = origTable.getValueAt(1, highIdx + 1).toString();
+                double lLow = lowStr.isEmpty() ? 0 : Double.valueOf(lowStr);
+                double lHigh = highStr.isEmpty() ? 0 : Double.valueOf(highStr);
+                double lInterp = lLow + w * (lHigh - lLow);
+
+                double delta = (err / 100.0) * (pw - lInterp);
+
+                double wLow = 1.0 - w;
+                double wHigh = w;
+                deltaSum[lowIdx] += wLow * delta;
+                weightSum[lowIdx] += wLow;
+                if (highIdx != lowIdx) {
+                    deltaSum[highIdx] += wHigh * delta;
+                    weightSum[highIdx] += wHigh;
+                }
+
+                meanErr += err;
+                cnt++;
+            }
+
+            if (cnt > 0)
+                meanErr /= cnt;
+
+            return true;
+        }
+        catch (Exception e) {
+            logger.error(e);
+            JOptionPane.showMessageDialog(this, e.toString(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
+
+    protected boolean displayData() {
+        try {
+            newTable.setValueAt(origTable.getValueAt(0, 0), 0, 0);
+            corrTable.setValueAt(origTable.getValueAt(0, 0), 0, 0);
+            for (int i = 1; i < origTable.getColumnCount(); ++i) {
+                newTable.setValueAt(origTable.getValueAt(0, i), 0, i);
+                corrTable.setValueAt(origTable.getValueAt(0, i), 0, i);
+            }
+            for (int j = 1; j < origTable.getRowCount(); ++j) {
+                newTable.setValueAt(origTable.getValueAt(j, 0), j, 0);
+                corrTable.setValueAt(origTable.getValueAt(j, 0), j, 0);
+            }
+
+            for (int i = 1; i < xAxisArray.size() + 1; ++i) {
+                String valStr = origTable.getValueAt(1, i).toString();
+                double lat = valStr.isEmpty() ? 0 : Double.valueOf(valStr);
+                int idx = i - 1;
+                if (weightSum != null && idx < weightSum.length && weightSum[idx] > 0) {
+                    double delta = deltaSum[idx] / weightSum[idx];
+                    newTable.setValueAt(String.format("%.3f", lat + delta), 1, i);
+                    corrTable.setValueAt(String.format("%.3f", delta), 1, i);
+                } else {
+                    newTable.setValueAt(valStr, 1, i);
+                    corrTable.setValueAt("", 1, i);
+                }
+            }
+            corrTable.setValueAt("", 1, 0);
+            Utils.colorTable(newTable);
+
+            String scaleStr = scaleOrigTable.getValueAt(0, 0).toString();
+            double scale = scaleStr.isEmpty() ? 0 : Double.parseDouble(scaleStr);
+            double newScale = scale * (1 + meanErr / 100.0);
+            double corrScale = newScale - scale;
+            scaleNewTable.setValueAt(String.format("%.5f", newScale), 0, 0);
+            corrCountTable.setValueAt(String.format("%.5f", corrScale), 0, 0);
+
+            plotRel2dChartData(voltAxisName, voltList, errAxisName, errList);
+            return true;
+        }
+        catch (Exception e) {
+            logger.error(e);
+            JOptionPane.showMessageDialog(this, e.toString(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        if (checkActionPerformed(e))
+            return;
+        if ("corr".equals(e.getActionCommand())) {
+            JRadioButton radioButton = (JRadioButton)e.getSource();
+            if (radioButton.isSelected())
+                plotRel2dChartData(voltAxisName, voltList, errAxisName, errList);
+            else
+                clear2dChartData();
+        }
+    }
+}

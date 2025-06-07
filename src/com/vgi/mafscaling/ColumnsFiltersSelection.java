@@ -75,6 +75,8 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     public static final String iatLabelText = "Intake Air Temperature";
     public static final String ffbLabelText = "Final Fueling Base";
     public static final String veFlowLabelText = "VE Flow/VE Commanded";
+    public static final String batteryVoltageLabelText = "Battery Voltage";
+    public static final String injectorPWLabelText = "Injector Pulse Width";
     public static final String thrtlChangeMaxLabelText = "Throttle Change % Maximum";
     public static final String minThrottleLabelText = "Throttle Input Minimum";
     public static final String isLoadCompInRatioLabelText = "Load Comp values are in ratio";
@@ -127,6 +129,8 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     protected JTextField iatName = null;
     protected JTextField ffbName = null;
     protected JTextField veFlowName = null;
+    protected JTextField batteryVoltageName = null;
+    protected JTextField injectorPWName = null;
     protected JFormattedTextField minMafVFilter = null;
     protected JFormattedTextField maxMafVFilter = null;
     protected JFormattedTextField maxRPMFilter = null;
@@ -480,6 +484,22 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         veFlowName.setDragEnabled(true);
         veFlowName.setTransferHandler(textTransferHandler);
         addCopyButton(colrow, "veflow");
+    }
+
+    protected void addBatteryVoltageColSelection() {
+        addLabel(columnsPanel, ++colrow, batteryVoltageLabelText);
+        batteryVoltageName = addColumn(colrow, Config.getBatteryVoltageColumnName());
+        batteryVoltageName.setDragEnabled(true);
+        batteryVoltageName.setTransferHandler(textTransferHandler);
+        addCopyButton(colrow, "battvolt");
+    }
+
+    protected void addInjectorPulseWidthColSelection() {
+        addLabel(columnsPanel, ++colrow, injectorPWLabelText);
+        injectorPWName = addColumn(colrow, Config.getInjectorPulseWidthColumnName());
+        injectorPWName.setDragEnabled(true);
+        injectorPWName.setTransferHandler(textTransferHandler);
+        addCopyButton(colrow, "injpw");
     }
 
     protected void createFiltersPanel() {
@@ -935,6 +955,10 @@ abstract class ColumnsFiltersSelection implements ActionListener {
             textField = vvt2Name;
         else if ("map".equals(e.getActionCommand()))
             textField = mapName;
+        else if ("battvolt".equals(e.getActionCommand()))
+            textField = batteryVoltageName;
+        else if ("injpw".equals(e.getActionCommand()))
+            textField = injectorPWName;
         else
             return;
         textField.setText(value);
