@@ -88,7 +88,8 @@ public class VECalc extends ACompCalc {
     private double thrtlMin = Config.getVEThrottleMinimumValue();
     private double afrMaxOl = Config.getVEOlAfrMaximumValue();
     private double afrMaxCl = Config.getVEClAfrMaximumValue();
-    private double afrMin = Config.getVEAfrMinimumValue();
+    private double afrMinOl = Config.getVEOlAfrMinimumValue();
+    private double afrMinCl = Config.getVEClAfrMinimumValue();
     private double rpmMin = Config.getVERPMMinimumValue();
     private double ffbMax = Config.getFFBMaximumValue();
     private double ffbMin = Config.getFFBMinimumValue();
@@ -354,7 +355,8 @@ public class VECalc extends ACompCalc {
         thrtlMin = Config.getVEThrottleMinimumValue();
         afrMaxOl = Config.getVEOlAfrMaximumValue();
         afrMaxCl = Config.getVEClAfrMaximumValue();
-        afrMin = Config.getVEAfrMinimumValue();
+        afrMinOl = Config.getVEOlAfrMinimumValue();
+        afrMinCl = Config.getVEClAfrMinimumValue();
         afrRowOffset = Config.getWBO2RowOffset();
         corrApplied = Config.getVECorrectionAppliedValue();
         afrSwitchMp = Config.getVEWbAfrMpSwitch();
@@ -476,7 +478,8 @@ public class VECalc extends ACompCalc {
                                     isClosed = alpha < 0.5;
                                 }
 
-                                boolean flag = isClosed ? (afrMin <= afrEff && afrEff <= afrMaxCl) : ((afrEff <= afrMaxOl || throttle >= thrtlMin) && afrEff <= afrMaxOl);
+                                boolean flag = isClosed ? (afrMinCl <= afrEff && afrEff <= afrMaxCl)
+                                                     : (afrMinOl <= afrEff && afrEff <= afrMaxOl);
                                 if (flag && rpmMin <= rpm && ffbMin <= ffb && ffb <= ffbMax && iat <= iatMax) {
                                     removed = false;
                                     if (!fullTimeOl && isClosed)

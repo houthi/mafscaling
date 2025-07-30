@@ -79,6 +79,8 @@ public class Config {
     public static final String DefaultVEOlAfrMaximum = "16.0";
     public static final String DefaultVEClAfrMaximum = "15.0";
     public static final String DefaultVEAfrMinimum = "13.7";
+    public static final String DefaultVEOlAfrMinimum = "10.0";
+    public static final String DefaultVEClAfrMinimum = "13.7";
     public static final String DefaultVEFullTimeOL = "false";
     // Default thresholds for blending stock and wideband AFR when Full Time OL mode is enabled
     public static final String DefaultVEWbAfrMpSwitch = "1.0";   // MP at which WB AFR blend starts
@@ -753,6 +755,22 @@ public class Config {
 
     public static void setVEClAfrMaximumValue(double v) {
         props.setProperty("VEClAfrMaximum", Double.toString(v));
+    }
+
+    public static double getVEOlAfrMinimumValue() {
+        return Double.parseDouble(props.getProperty("VEOlAfrMinimum", DefaultVEOlAfrMinimum));
+    }
+
+    public static void setVEOlAfrMinimumValue(double v) {
+        props.setProperty("VEOlAfrMinimum", Double.toString(v));
+    }
+
+    public static double getVEClAfrMinimumValue() {
+        return Double.parseDouble(props.getProperty("VEClAfrMinimum", DefaultVEClAfrMinimum));
+    }
+
+    public static void setVEClAfrMinimumValue(double v) {
+        props.setProperty("VEClAfrMinimum", Double.toString(v));
     }
 
     public static double getVEAfrMinimumValue() {
