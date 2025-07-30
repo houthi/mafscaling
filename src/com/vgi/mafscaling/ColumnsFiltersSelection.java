@@ -108,7 +108,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     public static final String olClTransitionSkipRowsLabelText = "OL/CL Transition - #Rows to Skip";
     public static final String afrMpSwitchLabelText = "WB AFR MP Switch";
     public static final String afrRpmSwitchLabelText = "WB AFR RPM Switch";
-    public static final String afrSmoothLabelText = "WB AFR Transition Smooth";
+    public static final String afrSmoothLabelText = "WB AFR Blend Range";
     protected JTable columnsTable = null;
     protected JTextField thrtlAngleName = null;
     protected JTextField afLearningName = null;
@@ -704,7 +704,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     }
 
     protected void addAfrSmoothFilter() {
-        addNote(filtersPanel, ++filtrow, 3, "Smoothing range for WB/Stock AFR switch");
+        addNote(filtersPanel, ++filtrow, 3, "Blend transition range for switching Stock/WB AFR");
         addLabel(filtersPanel, ++filtrow, afrSmoothLabelText);
         afrSmoothFilter = addTextFilter(filtrow, doubleFmt);
         addDefaultButton(filtrow, "wbsmooth");

@@ -80,9 +80,10 @@ public class Config {
     public static final String DefaultVEClAfrMaximum = "15.0";
     public static final String DefaultVEAfrMinimum = "13.7";
     public static final String DefaultVEFullTimeOL = "false";
-    public static final String DefaultVEWbAfrMpSwitch = "0.0";
-    public static final String DefaultVEWbAfrRpmSwitch = "0";
-    public static final String DefaultVEWbAfrSmooth = "0.0";
+    // Default thresholds for blending stock and wideband AFR when Full Time OL mode is enabled
+    public static final String DefaultVEWbAfrMpSwitch = "1.0";   // MP at which WB AFR blend starts
+    public static final String DefaultVEWbAfrRpmSwitch = "3000"; // RPM at which WB AFR blend starts
+    public static final String DefaultVEWbAfrSmooth = "0.3";    // Range over which blend transitions
     public static final String DefaultLoadMinimum = "0.2";
     public static final String DefaultDvDtMaximum = "0.7";
     public static final String DefaultMIAfrMaximum = "16.0";
