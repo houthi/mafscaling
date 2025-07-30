@@ -444,12 +444,13 @@ public class VECalc extends ACompCalc {
                                 iat = Double.valueOf(flds[logIatColIdx]);
                                 boolean isClosed = false;
                                 if (!fullTimeOl) {
-                                    if (flds[logClOlStatusColIdx] == "on")
+                                    String clStr = flds[logClOlStatusColIdx];
+                                    if (clStr.equalsIgnoreCase("on"))
                                         clol = 0;
-                                    else if (flds[logClOlStatusColIdx] == "off")
+                                    else if (clStr.equalsIgnoreCase("off"))
                                         clol = 1;
                                     else
-                                        clol = (int)Utils.parseValue(flds[logClOlStatusColIdx]);
+                                        clol = (int)Utils.parseValue(clStr);
                                     isClosed = (clol == 0);
                                 }
                                 double afrStock = Double.valueOf(afrflds[logStockAfrColIdx]);
@@ -472,6 +473,7 @@ public class VECalc extends ACompCalc {
                                     else if (alpha > 1)
                                         alpha = 1;
                                     afrEff = afrStock * (1 - alpha) + afrWb * alpha;
+                                    isClosed = alpha < 0.5;
                                 }
 
                                 boolean flag = isClosed ? (afrMin <= afrEff && afrEff <= afrMaxCl) : ((afrEff <= afrMaxOl || throttle >= thrtlMin) && afrEff <= afrMaxOl);
