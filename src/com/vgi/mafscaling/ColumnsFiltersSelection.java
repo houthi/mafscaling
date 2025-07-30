@@ -771,7 +771,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         return current;
     }
 
-    private void addCommentLabel(JPanel panel, int row, int colspan, String text) {
+    protected void addCommentLabel(JPanel panel, int row, int colspan, String text) {
         JLabel label = new JLabel(text);
         GridBagConstraints gbc_label = new GridBagConstraints();
         gbc_label.anchor = GridBagConstraints.WEST;
@@ -783,7 +783,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         panel.add(label, gbc_label);
     }
     
-    private void addLabel(JPanel panel, int row, String text) {
+    protected void addLabel(JPanel panel, int row, String text) {
         JLabel label = new JLabel(text);
         GridBagConstraints gbc_label = new GridBagConstraints();
         gbc_label.anchor = GridBagConstraints.EAST;
@@ -793,7 +793,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         panel.add(label, gbc_label);
     }
     
-    private void addNote(JPanel panel, int row, int colspan, String note) {
+    protected void addNote(JPanel panel, int row, int colspan, String note) {
         JEditorPane label = createWrapLabel(note);
         GridBagConstraints gbc_label = new GridBagConstraints();
         gbc_label.anchor = GridBagConstraints.WEST;
@@ -848,7 +848,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         columnsPanel.add(button, gbc_button);
     }
 
-    private JFormattedTextField addTextFilter(int row, NumberFormat format) {
+    protected JFormattedTextField addTextFilter(int row, NumberFormat format) {
         JFormattedTextField textField = new JFormattedTextField(format);
         textField.setColumns(6);
         textField.setBackground(Color.WHITE);
@@ -899,7 +899,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         return flag;
     }
     
-    private void addDefaultButton(int row, String action) {
+    protected void addDefaultButton(int row, String action) {
         JButton button = new JButton("default");
         GridBagConstraints gbc_button = new GridBagConstraints();
         gbc_button.anchor = GridBagConstraints.WEST;
