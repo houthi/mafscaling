@@ -100,7 +100,8 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         addThrottleAngleColSelection();
         addManifoldPressureColSelection();
         addFFBColSelection();
-        addClOlStatusColSelection();
+        if (!isFullOl)
+            addClOlStatusColSelection();
         addMAFColSelection();
         addVEFlowColSelection();
     }
@@ -114,8 +115,17 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         maxAfrFilter.setText(String.valueOf(Config.getVEOlAfrMaximumValue()));
         addAFRMinimumFilter();
         minAfrFilter.setText(String.valueOf(Config.getVEAfrMinimumValue()));
-        addCLOLStatusFilter();
-        clolStatusFilter.setValue(Config.getVEClOlStatusValue());
+        if (!isFullOl) {
+            addCLOLStatusFilter();
+            clolStatusFilter.setValue(Config.getVEClOlStatusValue());
+        } else {
+            addAfrMpSwitchFilter();
+            afrMpSwitchFilter.setText(String.valueOf(Config.getVEWbAfrMpSwitch()));
+            addAfrRpmSwitchFilter();
+            afrRpmSwitchFilter.setText(String.valueOf(Config.getVEWbAfrRpmSwitch()));
+            addAfrSmoothFilter();
+            afrSmoothFilter.setText(String.valueOf(Config.getVEWbAfrSmooth()));
+        }
         addIATMaximumFilter();
         maxIatFilter.setText(String.valueOf(Config.getVEIatMaximumValue()));
         addRPMMinimumFilter();
@@ -144,7 +154,7 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
                     label.setText(label.getText() + " (hint: check min RPM in SD table (y-axis)");
                 else if (label.getText().startsWith("Remove data where Manifold Pressure is below"))
                     label.setText(label.getText() + " (hint: check min MP in SD table (x-axis)");
-                else if (label.getText().equals(clolStatusLabelText))
+                else if (!isFullOl && label.getText().equals(clolStatusLabelText))
                     label.setText(clolStatusLabelText + " *");
             }
         }
@@ -247,15 +257,17 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         else
             Config.setFinalFuelingBaseColumnName(value);
 
-        // CL/OL Status
-        value = clolStatusName.getText().trim();
-        colName = clolStatusLabelText;
-        if (value.isEmpty()) {
-            ret = false;
-            error.append("\"").append(colName).append("\" column must be specified\n");
+        if (!isFullOl) {
+            // CL/OL Status
+            value = clolStatusName.getText().trim();
+            colName = clolStatusLabelText;
+            if (value.isEmpty()) {
+                ret = false;
+                error.append("\"").append(colName).append("\" column must be specified\n");
+            }
+            else
+                Config.setClOlStatusColumnName(value);
         }
-        else
-            Config.setClOlStatusColumnName(value);
 
         // MAF
         value = mafName.getText().trim();
@@ -291,9 +303,15 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
 
         // WBO2 Row Offset
         Config.setWBO2RowOffset(Integer.valueOf(wbo2RowOffsetField.getText()));
-        
-        // CL/OL Status
-        Config.setVEClOlStatusValue(Integer.valueOf(clolStatusFilter.getValue().toString()));
+
+        if (isFullOl) {
+            Config.setVEWbAfrMpSwitch(Double.valueOf(afrMpSwitchFilter.getText()));
+            Config.setVEWbAfrRpmSwitch(Integer.valueOf(afrRpmSwitchFilter.getText()));
+            Config.setVEWbAfrSmooth(Double.valueOf(afrSmoothFilter.getText()));
+        } else {
+            // CL/OL Status
+            Config.setVEClOlStatusValue(Integer.valueOf(clolStatusFilter.getValue().toString()));
+        }
         
         // IAT filter
         Config.setVEIatMaximumValue(Double.valueOf(maxIatFilter.getText()));
@@ -342,6 +360,12 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
             minAfrFilter.setText(Config.DefaultVEAfrMinimum);
         else if ("wbo2offset".equals(e.getActionCommand()))
             wbo2RowOffsetField.setText(Config.DefaultWBO2RowOffset);
+        else if ("wbswitchmp".equals(e.getActionCommand()))
+            afrMpSwitchFilter.setText(Config.DefaultVEWbAfrMpSwitch);
+        else if ("wbswitchrpm".equals(e.getActionCommand()))
+            afrRpmSwitchFilter.setText(Config.DefaultVEWbAfrRpmSwitch);
+        else if ("wbsmooth".equals(e.getActionCommand()))
+            afrSmoothFilter.setText(Config.DefaultVEWbAfrSmooth);
         else if ("minhitcnt".equals(e.getActionCommand()))
             minCellHitCountFilter.setText(Config.DefaultVEMinCellHitCount);
         else if ("corrapply".equals(e.getActionCommand()))

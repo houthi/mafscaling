@@ -106,6 +106,9 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     public static final String minWOTEnrichmentLabelText = "Min WOT Enrichment";
     public static final String wbo2RowOffsetLabelText = "Wideband AFR Row Offset";
     public static final String olClTransitionSkipRowsLabelText = "OL/CL Transition - #Rows to Skip";
+    public static final String afrMpSwitchLabelText = "WB AFR MP Switch";
+    public static final String afrRpmSwitchLabelText = "WB AFR RPM Switch";
+    public static final String afrSmoothLabelText = "WB AFR Transition Smooth";
     protected JTable columnsTable = null;
     protected JTextField thrtlAngleName = null;
     protected JTextField afLearningName = null;
@@ -142,6 +145,9 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     protected JFormattedTextField olClTransitionSkipRowsField = null;
     protected JFormattedTextField maxAfrFilter = null;
     protected JFormattedTextField minAfrFilter = null;
+    protected JFormattedTextField afrMpSwitchFilter = null;
+    protected JFormattedTextField afrRpmSwitchFilter = null;
+    protected JFormattedTextField afrSmoothFilter = null;
     protected JFormattedTextField atmPressureFilter = null;
     protected JFormattedTextField maxIatFilter = null;
     protected JFormattedTextField maxDvdtFilter = null;
@@ -681,6 +687,27 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         addLabel(filtersPanel, ++filtrow, wbo2RowOffsetLabelText);
         wbo2RowOffsetField = addTextFilter(filtrow, intFmt);
         addDefaultButton(filtrow, "wbo2offset");
+    }
+
+    protected void addAfrMpSwitchFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "MP where WB AFR starts to blend in");
+        addLabel(filtersPanel, ++filtrow, afrMpSwitchLabelText);
+        afrMpSwitchFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "wbswitchmp");
+    }
+
+    protected void addAfrRpmSwitchFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "RPM where WB AFR starts to blend in");
+        addLabel(filtersPanel, ++filtrow, afrRpmSwitchLabelText);
+        afrRpmSwitchFilter = addTextFilter(filtrow, intFmt);
+        addDefaultButton(filtrow, "wbswitchrpm");
+    }
+
+    protected void addAfrSmoothFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Smoothing range for WB/Stock AFR switch");
+        addLabel(filtersPanel, ++filtrow, afrSmoothLabelText);
+        afrSmoothFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "wbsmooth");
     }
     
     protected void addOLCLTransitionSkipRowsFilter() {

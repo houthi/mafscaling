@@ -80,6 +80,9 @@ public class Config {
     public static final String DefaultVEClAfrMaximum = "15.0";
     public static final String DefaultVEAfrMinimum = "13.7";
     public static final String DefaultVEFullTimeOL = "false";
+    public static final String DefaultVEWbAfrMpSwitch = "0.0";
+    public static final String DefaultVEWbAfrRpmSwitch = "0";
+    public static final String DefaultVEWbAfrSmooth = "0.0";
     public static final String DefaultLoadMinimum = "0.2";
     public static final String DefaultDvDtMaximum = "0.7";
     public static final String DefaultMIAfrMaximum = "16.0";
@@ -541,6 +544,30 @@ public class Config {
 
     public static void setWBO2RowOffset(int v) {
         props.setProperty("WBO2RowOffset", Integer.toString(v));
+    }
+
+    public static double getVEWbAfrMpSwitch() {
+        return Double.parseDouble(props.getProperty("VEWbAfrMpSwitch", DefaultVEWbAfrMpSwitch));
+    }
+
+    public static void setVEWbAfrMpSwitch(double v) {
+        props.setProperty("VEWbAfrMpSwitch", Double.toString(v));
+    }
+
+    public static int getVEWbAfrRpmSwitch() {
+        return Integer.parseInt(props.getProperty("VEWbAfrRpmSwitch", DefaultVEWbAfrRpmSwitch));
+    }
+
+    public static void setVEWbAfrRpmSwitch(int v) {
+        props.setProperty("VEWbAfrRpmSwitch", Integer.toString(v));
+    }
+
+    public static double getVEWbAfrSmooth() {
+        return Double.parseDouble(props.getProperty("VEWbAfrSmooth", DefaultVEWbAfrSmooth));
+    }
+
+    public static void setVEWbAfrSmooth(double v) {
+        props.setProperty("VEWbAfrSmooth", Double.toString(v));
     }
 
     public static int getOLCLTransitionSkipRows() {

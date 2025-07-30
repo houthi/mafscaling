@@ -93,6 +93,9 @@ public class VECalc extends ACompCalc {
     private double iatMax = Config.getVEIatMaximumValue();
     private int corrApplied = Config.getVECorrectionAppliedValue();
     private boolean fullTimeOl = Config.veFullTimeOl();
+    private double afrSwitchMp = Config.getVEWbAfrMpSwitch();
+    private int afrSwitchRpm = Config.getVEWbAfrRpmSwitch();
+    private double afrSmooth = Config.getVEWbAfrSmooth();
     private int logClOlStatusColIdx = -1;
     private int logThrottleAngleColIdx = -1;
     private int logRpmColIdx = -1;
@@ -326,6 +329,7 @@ public class VECalc extends ACompCalc {
         logIatColIdx = columns.indexOf(logIatColName);
         logMpColIdx = columns.indexOf(logMpColName);
         fullTimeOl = Config.veFullTimeOl();
+        if (logClOlStatusColIdx == -1 && !fullTimeOl) { Config.setClOlStatusColumnName(Config.NO_NAME); ret = false; }
         if (logThrottleAngleColIdx == -1)        { Config.setThrottleAngleColumnName(Config.NO_NAME);    ret = false; }
         if (logFfbColIdx == -1)                  { Config.setFinalFuelingBaseColumnName(Config.NO_NAME); ret = false; }
         if (logSdColIdx == -1)                   { Config.setVEFlowColumnName(Config.NO_NAME);           ret = false; }
@@ -350,6 +354,9 @@ public class VECalc extends ACompCalc {
         afrMin = Config.getVEAfrMinimumValue();
         afrRowOffset = Config.getWBO2RowOffset();
         corrApplied = Config.getVECorrectionAppliedValue();
+        afrSwitchMp = Config.getVEWbAfrMpSwitch();
+        afrSwitchRpm = Config.getVEWbAfrRpmSwitch();
+        afrSmooth = Config.getVEWbAfrSmooth();
         return ret;
     }
     
@@ -433,17 +440,33 @@ public class VECalc extends ACompCalc {
                                 rpm = Double.valueOf(flds[logRpmColIdx]);
                                 ffb = Double.valueOf(flds[logFfbColIdx]);
                                 iat = Double.valueOf(flds[logIatColIdx]);
-                                if (flds[logClOlStatusColIdx] == "on")
-                                    clol = 0;
-                                else if (flds[logClOlStatusColIdx] == "off")
-                                    clol = 1;
-                                else
-                                    clol = (int)Utils.parseValue(flds[logClOlStatusColIdx]);
-                                boolean isClosed = (clol == 0);
-                                if (isClosed) {
-                                    afr = Double.valueOf(afrflds[logStockAfrColIdx]);
+                                boolean isClosed = false;
+                                if (!fullTimeOl) {
+                                    if (flds[logClOlStatusColIdx] == "on")
+                                        clol = 0;
+                                    else if (flds[logClOlStatusColIdx] == "off")
+                                        clol = 1;
+                                    else
+                                        clol = (int)Utils.parseValue(flds[logClOlStatusColIdx]);
+                                    isClosed = (clol == 0);
+                                    afr = isClosed ? Double.valueOf(afrflds[logStockAfrColIdx]) : Double.valueOf(afrflds[logWbAfrColIdx]);
                                 } else {
-                                    afr = Double.valueOf(afrflds[logWbAfrColIdx]);
+                                    double mp = Double.valueOf(flds[logMpColIdx]);
+                                    double afrWb = Double.valueOf(afrflds[logWbAfrColIdx]);
+                                    double afrStock = Double.valueOf(afrflds[logStockAfrColIdx]);
+                                    double alpha;
+                                    if (afrSmooth <= 0)
+                                        alpha = (rpm >= afrSwitchRpm || mp >= afrSwitchMp) ? 1.0 : 0.0;
+                                    else {
+                                        double mpA = 0.5 + 0.5 * Math.tanh((mp - afrSwitchMp) / afrSmooth);
+                                        double rpmA = 0.5 + 0.5 * Math.tanh((rpm - afrSwitchRpm) / afrSmooth);
+                                        alpha = Math.max(mpA, rpmA);
+                                    }
+                                    if (alpha < 0)
+                                        alpha = 0;
+                                    else if (alpha > 1)
+                                        alpha = 1;
+                                    afr = afrStock * (1 - alpha) + afrWb * alpha;
                                 }
                                 boolean flag = isClosed ? (afrMin <= afr && afr <= afrMaxCl) : ((afr <= afrMaxOl || throttle >= thrtlMin) && afr <= afrMaxOl);
                                 if (flag && rpmMin <= rpm && ffbMin <= ffb && ffb <= ffbMax && iat <= iatMax) {
