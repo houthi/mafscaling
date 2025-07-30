@@ -27,6 +27,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Stroke;
 import java.awt.event.ActionEvent;
+import java.awt.event.ItemEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.ResourceBundle;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -109,9 +112,10 @@ public class VECalc extends ACompCalc {
     private int logStockAfrColIdx = -1;
     private int logAfLearningColIdx = -1;
     private int logAfCorrectionColIdx = -1;
-    private int logMafColIdx = -1;    
-    private int logFfbColIdx = -1;    
+    private int logMafColIdx = -1;
+    private int logFfbColIdx = -1;
     private int logSdColIdx = -1;
+    private TableColumn mafColumn = null;
     
     private String[] logColumns = new String[] { "RPM", "IAT", "MP", "FFB", "AFR", "WB", "AFRE", "MAF", "VE", "CL" };
     private JComboBox<String> sdType = null;
@@ -130,6 +134,9 @@ public class VECalc extends ACompCalc {
         y3dAxisName = "RPM";
         z3dAxisName = "Avg Error %";
         initialize(logColumns);
+        mafColumn = logDataTable.getColumnModel().getColumn(7);
+        mafColumn.setIdentifier("MAF");
+        updateMafColumnVisibility();
     }
 
     //////////////////////////////////////////////////////////////////////////////////////
@@ -165,6 +172,7 @@ public class VECalc extends ACompCalc {
         mpType = addComboBox(cntlPanel, 7, new String [] { "Torr/mmHG Abs", "Torr/mmHG Rel Sea Lvl", "Psi Abs", "Psi Rel Sea Lvl" });
         addLabel(cntlPanel, 8, "Run");
         dataType = addComboBox(cntlPanel, 9, new String [] { "MAF Builder", "AFR Tuner" });
+        dataType.addItemListener(e -> { if (e.getStateChange() == ItemEvent.SELECTED) updateMafColumnVisibility(); });
         addCheckBox(cntlPanel, 10, "Hide Log Table", "hidelogtable");
         compareTableCheckBox = addCheckBox(cntlPanel, 11, "Compare Tables", "comparetables");
         addButton(cntlPanel, 12, "GO", "go", GridBagConstraints.EAST);
@@ -342,7 +350,8 @@ public class VECalc extends ACompCalc {
         if (logAfLearningColIdx == -1 && !fullTimeOl)  { Config.setAfLearningColumnName(Config.NO_NAME);       ret = false; }
         if (logAfCorrectionColIdx == -1 && !fullTimeOl){ Config.setAfCorrectionColumnName(Config.NO_NAME);     ret = false; }
         if (logRpmColIdx == -1)                  { Config.setRpmColumnName(Config.NO_NAME);              ret = false; }
-        if (logMafColIdx == -1)                  { Config.setMassAirflowColumnName(Config.NO_NAME);      ret = false; }
+        boolean mafMode = (dataType.getSelectedIndex() == 0);
+        if (logMafColIdx == -1) { Config.setMassAirflowColumnName(Config.NO_NAME); if (mafMode) ret = false; }
         if (logMpColIdx == -1)                   { Config.setMpColumnName(Config.NO_NAME);               ret = false; }
         if (logIatColIdx == -1)                  { Config.setIatColumnName(Config.NO_NAME);              ret = false; }
         rpmMin = Config.getVERPMMinimumValue();
@@ -382,9 +391,10 @@ public class VECalc extends ACompCalc {
                     continue;
                 getColumnsFilters(elements);
                 boolean resetColumns = false;
+                boolean mafMode = (dataType.getSelectedIndex() == 0);
                 if (logThrottleAngleColIdx >= 0 || logFfbColIdx >= 0 || logSdColIdx >= 0 ||
                     logWbAfrColIdx >= 0 || logStockAfrColIdx >= 0 || logAfLearningColIdx >= 0 || logAfCorrectionColIdx >= 0 ||
-                    logRpmColIdx >= 0 || logMafColIdx >= 0 || logIatColIdx >= 0 || logMpColIdx >= 0) {
+                    logRpmColIdx >= 0 || (mafMode && logMafColIdx >= 0) || logIatColIdx >= 0 || logMpColIdx >= 0) {
                     if (displayDialog) {
                         int rc = JOptionPane.showOptionDialog(null, "Would you like to reset column names or filter values?", "Columns/Filters Reset", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, optionButtons, optionButtons[0]);
                         if (rc == 0)
@@ -396,8 +406,8 @@ public class VECalc extends ACompCalc {
 
                 if (resetColumns || logThrottleAngleColIdx < 0 || logFfbColIdx < 0 || logSdColIdx < 0 || logWbAfrColIdx < 0 ||
                     logStockAfrColIdx < 0 || logAfLearningColIdx < 0 || logAfCorrectionColIdx < 0 ||
-                    logRpmColIdx < 0 || logMafColIdx < 0 || logIatColIdx < 0 || logMpColIdx < 0) {
-                    ColumnsFiltersSelection selectionWindow = new VEColumnsFiltersSelection();
+                    logRpmColIdx < 0 || (mafMode && logMafColIdx < 0) || logIatColIdx < 0 || logMpColIdx < 0) {
+                    ColumnsFiltersSelection selectionWindow = new VEColumnsFiltersSelection(mafMode);
                     if (!selectionWindow.getUserSettings(elements) || !getColumnsFilters(elements))
                         return;
                 }
@@ -494,9 +504,10 @@ public class VECalc extends ACompCalc {
                                     logDataTable.setValueAt(afrStock, row, 4);
                                     logDataTable.setValueAt(afrWb, row, 5);
                                     logDataTable.setValueAt(afrEff, row, 6);
-                                    logDataTable.setValueAt(Double.valueOf(flds[logMafColIdx]), row, 7);
-                                    logDataTable.setValueAt(Double.valueOf(flds[logSdColIdx]), row, 8);
-                                    logDataTable.setValueAt(isClosed ? 1 : 0, row, 9);
+                                    if (mafMode)
+                                        logDataTable.setValueAt(Double.valueOf(flds[logMafColIdx]), row, 7);
+                                    logDataTable.setValueAt(Double.valueOf(flds[logSdColIdx]), row, mafMode ? 8 : 7);
+                                    logDataTable.setValueAt(isClosed ? 1 : 0, row, mafMode ? 9 : 8);
                                     row += 1;
                                 }
                                 else
@@ -552,16 +563,17 @@ public class VECalc extends ACompCalc {
             xData = new HashMap<Double, HashMap<Double, ArrayList<LogData>>>();
             HashMap<Double, ArrayList<LogData>> yData;
             ArrayList<LogData> data;
+            boolean mafMode = (dataType.getSelectedIndex() == 0);
             for (int i = 0; i < logDataTable.getRowCount(); ++i) {
                 rpmStr = logDataTable.getValueAt(i, 0).toString();
                 iatStr = logDataTable.getValueAt(i, 1).toString();
                 mpStr  = logDataTable.getValueAt(i, 2).toString();
                 ffbStr = logDataTable.getValueAt(i, 3).toString();
                 afreStr = logDataTable.getValueAt(i, 6).toString();
-                mafStr = logDataTable.getValueAt(i, 7).toString();
-                sdStr  = logDataTable.getValueAt(i, 8).toString();
-                clStr  = logDataTable.getValueAt(i, 9).toString();
-                if (rpmStr.isEmpty() || mpStr.isEmpty() || iatStr.isEmpty() || afreStr.isEmpty() || mafStr.isEmpty() || ffbStr.isEmpty() || sdStr.isEmpty())
+                mafStr = mafMode ? logDataTable.getValueAt(i, 7).toString() : "";
+                sdStr  = logDataTable.getValueAt(i, mafMode ? 8 : 7).toString();
+                clStr  = logDataTable.getValueAt(i, mafMode ? 9 : 8).toString();
+                if (rpmStr.isEmpty() || mpStr.isEmpty() || iatStr.isEmpty() || afreStr.isEmpty() || (mafMode && mafStr.isEmpty()) || ffbStr.isEmpty() || sdStr.isEmpty())
                     continue;
                 logData = new LogData();
                 logData.mp = (Double.valueOf(mpStr) * mapG) + mapO;
@@ -573,8 +585,13 @@ public class VECalc extends ACompCalc {
                 logData.mp = xAxisArray.get(Utils.closestValueIndex(logData.mp, xAxisArray));
                 logData.rpm = yAxisArray.get(Utils.closestValueIndex(logData.rpm, yAxisArray));
                 logData.iat = Double.valueOf(iatStr);
-                logData.maf = Double.valueOf(mafStr);
-                logData.sd = Double.valueOf(sdStr);
+                if (mafMode) {
+                    logData.maf = Double.valueOf(mafStr);
+                    logData.sd = Double.valueOf(sdStr);
+                } else {
+                    logData.maf = Double.NaN;
+                    logData.sd = Double.valueOf(sdStr);
+                }
                 logData.afr = Double.valueOf(afreStr);
                 try {
                     logData.cl = Integer.parseInt(clStr);
@@ -582,7 +599,10 @@ public class VECalc extends ACompCalc {
                     logData.cl = 0;
                 }
                 logData.ffb = Double.valueOf(ffbStr);
-                logData.sderr = ((logData.sd - logData.maf) / logData.maf) * 100.0;
+                if (mafMode)
+                    logData.sderr = ((logData.sd - logData.maf) / logData.maf) * 100.0;
+                else
+                    logData.sderr = 0.0;
                 if (Double.isNaN(trims.get(i)))
                     logData.afrerr = ((logData.afr - logData.ffb) / logData.ffb) * 100.0;
                 else
@@ -682,6 +702,26 @@ public class VECalc extends ACompCalc {
         trims.clear();
         runData.clear();
         trendData.clear();
+    }
+
+    private void updateMafColumnVisibility() {
+        if (mafColumn == null || logDataTable == null)
+            return;
+        boolean isMafMode = (dataType.getSelectedIndex() == 0);
+        TableColumnModel model = logDataTable.getColumnModel();
+        boolean hasColumn;
+        try {
+            model.getColumnIndex(mafColumn.getIdentifier());
+            hasColumn = true;
+        } catch (IllegalArgumentException ex) {
+            hasColumn = false;
+        }
+        if (isMafMode && !hasColumn) {
+            model.addColumn(mafColumn);
+            model.moveColumn(model.getColumnCount() - 1, 7);
+        } else if (!isMafMode && hasColumn) {
+            model.removeColumn(mafColumn);
+        }
     }
     
     protected void clearLogDataTables() {

@@ -39,10 +39,19 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
     JPanel selectionPanel = null;
     private String[] columns = null;
     private boolean isFullOl = false;
+    private boolean mafMode = true;
     private JFormattedTextField maxAfrWbFilter = null;
     private JFormattedTextField minAfrWbFilter = null;
     private JFormattedTextField maxAfrClFilter = null;
     private JFormattedTextField minAfrClFilter = null;
+
+    public VEColumnsFiltersSelection() {
+        this(true);
+    }
+
+    public VEColumnsFiltersSelection(boolean mafMode) {
+        this.mafMode = mafMode;
+    }
     
     public boolean getUserSettings(String[] cols) {
         columns = cols;
@@ -107,7 +116,8 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         addFFBColSelection();
         if (!isFullOl)
             addClOlStatusColSelection();
-        addMAFColSelection();
+        if (mafMode)
+            addMAFColSelection();
         addVEFlowColSelection();
     }
     
@@ -278,15 +288,19 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
                 Config.setClOlStatusColumnName(value);
         }
 
-        // MAF
-        value = mafName.getText().trim();
-        colName = mafLabelText;
-        if (value.isEmpty()) {
-            ret = false;
-            error.append("\"").append(colName).append("\" column must be specified\n");
+        if (mafMode) {
+            // MAF
+            value = mafName.getText().trim();
+            colName = mafLabelText;
+            if (value.isEmpty()) {
+                ret = false;
+                error.append("\"").append(colName).append("\" column must be specified\n");
+            }
+            else
+                Config.setMassAirflowColumnName(value);
+        } else {
+            Config.setMassAirflowColumnName(Config.NO_NAME);
         }
-        else
-            Config.setMassAirflowColumnName(value);
 
         // VE Flow
         value = veFlowName.getText().trim();
