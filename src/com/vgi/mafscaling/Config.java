@@ -88,7 +88,6 @@ public class Config {
     private static final String CFG_FILE = "config.xml";
     public static final String NO_NAME = "#$#";
     private static Properties props = new Properties();
-    public static boolean veOpenLoop = true;
 
     public static String getProperty(String name) {
         return props.getProperty(name, "");
@@ -822,13 +821,6 @@ public class Config {
         props.setProperty("VVT2RPMColumn", s);
     }
     
-    public static boolean veOpenLoop() {
-        return veOpenLoop;
-    }
-    
-    public static void veOpenLoop(boolean f) {
-        veOpenLoop = f;
-    }
     
     public static String getEncoding() {
         return props.getProperty("Encoding", DefaultEncoding);
