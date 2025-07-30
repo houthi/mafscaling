@@ -21,8 +21,10 @@ package com.vgi.mafscaling;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
+import java.awt.event.ItemEvent;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JOptionPane;
@@ -35,12 +37,29 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
     private JScrollPane pane = null;
     JPanel selectionPanel = null;
     private String[] columns = null;
+    private boolean isFullOl = false;
     
     public boolean getUserSettings(String[] cols) {
         columns = cols;
         createScrollPane();
+        final JComboBox<String> modeSelection = new JComboBox<String>(new String [] { "CL/OL", "Full Time OL" });
+        modeSelection.addItemListener(e -> {
+            if(e.getStateChange() == ItemEvent.SELECTED) {
+                isFullOl = (modeSelection.getSelectedIndex() == 1);
+                selectionPanel.remove(columnsPanel);
+                selectionPanel.remove(filtersPanel);
+                createColumnsPanel(columns);
+                createFiltersPanel();
+                selectionPanel.add(columnsPanel);
+                selectionPanel.add(filtersPanel);
+                selectionPanel.revalidate();
+                selectionPanel.repaint();
+                pane.setPreferredSize(new Dimension(windowWidth, windowHeight));
+                SwingUtilities.invokeLater(() -> pane.getVerticalScrollBar().setValue(0));
+            }
+        });
 
-        JComponent[] inputs = new JComponent[] {pane};
+        JComponent[] inputs = new JComponent[] {modeSelection, pane};
         // bring scroll pane to the start
         SwingUtilities.invokeLater(new Runnable() { public void run() { pane.getVerticalScrollBar().setValue(0); } });
         
@@ -72,8 +91,10 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
     protected void addColSelection() {
         addWidebandAFRColSelection();
         addStockAFRColSelection();
-        addAFCorrectionColSelection();
-        addAFLearningColSelection();
+        if (!isFullOl) {
+            addAFCorrectionColSelection();
+            addAFLearningColSelection();
+        }
         addRPMColSelection();
         addIATColSelection();
         addThrottleAngleColSelection();
@@ -154,25 +175,27 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         else
             Config.setAfrColumnName(value);
 
-        // AFR Learning
-        value = afLearningName.getText().trim();
-        colName = afLearningLabelText;
-        if (value.isEmpty()) {
-            ret = false;
-            error.append("\"").append(colName).append("\" column must be specified\n");
-        }
-        else
-            Config.setAfLearningColumnName(value);
+        if (!isFullOl) {
+            // AFR Learning
+            value = afLearningName.getText().trim();
+            colName = afLearningLabelText;
+            if (value.isEmpty()) {
+                ret = false;
+                error.append("\"").append(colName).append("\" column must be specified\n");
+            }
+            else
+                Config.setAfLearningColumnName(value);
 
-        // AFR Correction
-        value = afCorrectionName.getText().trim();
-        colName = afCorrectionLabelText;
-        if (value.isEmpty()) {
-            ret = false;
-            error.append("\"").append(colName).append("\" column must be specified\n");
+            // AFR Correction
+            value = afCorrectionName.getText().trim();
+            colName = afCorrectionLabelText;
+            if (value.isEmpty()) {
+                ret = false;
+                error.append("\"").append(colName).append("\" column must be specified\n");
+            }
+            else
+                Config.setAfCorrectionColumnName(value);
         }
-        else
-            Config.setAfCorrectionColumnName(value);
         
         // Engine Speed
         value = rpmName.getText().trim();
@@ -290,7 +313,9 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         
         // Correction applied
         Config.setVECorrectionAppliedValue(Integer.valueOf(correctionAppliedValue.getValue().toString()));
-        
+
+        Config.veFullTimeOl(isFullOl);
+
         return ret;
     }
     

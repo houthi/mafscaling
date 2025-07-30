@@ -92,6 +92,7 @@ public class VECalc extends ACompCalc {
     private double mpMin = Config.getVEMPMinimumValue();
     private double iatMax = Config.getVEIatMaximumValue();
     private int corrApplied = Config.getVECorrectionAppliedValue();
+    private boolean fullTimeOl = Config.veFullTimeOl();
     private int logClOlStatusColIdx = -1;
     private int logThrottleAngleColIdx = -1;
     private int logRpmColIdx = -1;
@@ -324,13 +325,14 @@ public class VECalc extends ACompCalc {
         logMafColIdx = columns.indexOf(logMafColName);
         logIatColIdx = columns.indexOf(logIatColName);
         logMpColIdx = columns.indexOf(logMpColName);
+        fullTimeOl = Config.veFullTimeOl();
         if (logThrottleAngleColIdx == -1)        { Config.setThrottleAngleColumnName(Config.NO_NAME);    ret = false; }
         if (logFfbColIdx == -1)                  { Config.setFinalFuelingBaseColumnName(Config.NO_NAME); ret = false; }
         if (logSdColIdx == -1)                   { Config.setVEFlowColumnName(Config.NO_NAME);           ret = false; }
         if (logWbAfrColIdx == -1)        { Config.setWidebandAfrColumnName(Config.NO_NAME);      ret = false; }
         if (logStockAfrColIdx == -1)    { Config.setAfrColumnName(Config.NO_NAME);              ret = false; }
-        if (logAfLearningColIdx == -1)  { Config.setAfLearningColumnName(Config.NO_NAME);       ret = false; }
-        if (logAfCorrectionColIdx == -1){ Config.setAfCorrectionColumnName(Config.NO_NAME);     ret = false; }
+        if (logAfLearningColIdx == -1 && !fullTimeOl)  { Config.setAfLearningColumnName(Config.NO_NAME);       ret = false; }
+        if (logAfCorrectionColIdx == -1 && !fullTimeOl){ Config.setAfCorrectionColumnName(Config.NO_NAME);     ret = false; }
         if (logRpmColIdx == -1)                  { Config.setRpmColumnName(Config.NO_NAME);              ret = false; }
         if (logMafColIdx == -1)                  { Config.setMassAirflowColumnName(Config.NO_NAME);      ret = false; }
         if (logMpColIdx == -1)                   { Config.setMpColumnName(Config.NO_NAME);               ret = false; }
@@ -446,7 +448,7 @@ public class VECalc extends ACompCalc {
                                 boolean flag = isClosed ? (afrMin <= afr && afr <= afrMaxCl) : ((afr <= afrMaxOl || throttle >= thrtlMin) && afr <= afrMaxOl);
                                 if (flag && rpmMin <= rpm && ffbMin <= ffb && ffb <= ffbMax && iat <= iatMax) {
                                     removed = false;
-                                    if (isClosed)
+                                    if (!fullTimeOl && isClosed)
                                         trims.add(Double.valueOf(flds[logAfLearningColIdx]) + Double.valueOf(flds[logAfCorrectionColIdx]));
                                     else
                                         trims.add(Double.NaN);

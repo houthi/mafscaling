@@ -79,6 +79,7 @@ public class Config {
     public static final String DefaultVEOlAfrMaximum = "16.0";
     public static final String DefaultVEClAfrMaximum = "15.0";
     public static final String DefaultVEAfrMinimum = "13.7";
+    public static final String DefaultVEFullTimeOL = "false";
     public static final String DefaultLoadMinimum = "0.2";
     public static final String DefaultDvDtMaximum = "0.7";
     public static final String DefaultMIAfrMaximum = "16.0";
@@ -88,6 +89,7 @@ public class Config {
     private static final String CFG_FILE = "config.xml";
     public static final String NO_NAME = "#$#";
     private static Properties props = new Properties();
+    public static boolean veFullTimeOl = false;
 
     public static String getProperty(String name) {
         return props.getProperty(name, "");
@@ -819,6 +821,14 @@ public class Config {
 
     public static void setVVT2RPMColumn(String s) {
         props.setProperty("VVT2RPMColumn", s);
+    }
+
+    public static boolean veFullTimeOl() {
+        return veFullTimeOl;
+    }
+
+    public static void veFullTimeOl(boolean f) {
+        veFullTimeOl = f;
     }
     
     
