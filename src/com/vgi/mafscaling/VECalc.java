@@ -75,6 +75,9 @@ public class VECalc extends ACompCalc {
         public double sd = 0;
         public double sderr = 0;
         public double afrerr = 0;
+        public double afrStock = 0;
+        public double afrWb = 0;
+        public int cl = 0;
     }
 
     private static final String xAxisName = "RPM";
@@ -109,7 +112,7 @@ public class VECalc extends ACompCalc {
     private int logFfbColIdx = -1;    
     private int logSdColIdx = -1;
     
-    private String[] logColumns = new String[] { "RPM", "IAT", "MP", "FFB", "AFR", "MAF", "VE" };
+    private String[] logColumns = new String[] { "RPM", "IAT", "MP", "FFB", "AFR", "WB", "AFRE", "MAF", "VE", "CL" };
     private JComboBox<String> sdType = null;
     private JComboBox<String> mpType = null;
     private JComboBox<String> dataType = null;
@@ -408,7 +411,6 @@ public class VECalc extends ACompCalc {
                 double throttle = 0;
                 double pThrottle = 0;
                 double ppThrottle = 0;
-                double afr = 0;
                 double rpm;
                 double ffb;
                 double iat;
@@ -449,11 +451,14 @@ public class VECalc extends ACompCalc {
                                     else
                                         clol = (int)Utils.parseValue(flds[logClOlStatusColIdx]);
                                     isClosed = (clol == 0);
-                                    afr = isClosed ? Double.valueOf(afrflds[logStockAfrColIdx]) : Double.valueOf(afrflds[logWbAfrColIdx]);
+                                }
+                                double afrStock = Double.valueOf(afrflds[logStockAfrColIdx]);
+                                double afrWb = Double.valueOf(afrflds[logWbAfrColIdx]);
+                                double afrEff;
+                                if (!fullTimeOl) {
+                                    afrEff = isClosed ? afrStock : afrWb;
                                 } else {
                                     double mp = Double.valueOf(flds[logMpColIdx]);
-                                    double afrWb = Double.valueOf(afrflds[logWbAfrColIdx]);
-                                    double afrStock = Double.valueOf(afrflds[logStockAfrColIdx]);
                                     double alpha;
                                     if (afrSmooth <= 0)
                                         alpha = (rpm >= afrSwitchRpm || mp >= afrSwitchMp) ? 1.0 : 0.0;
@@ -466,9 +471,10 @@ public class VECalc extends ACompCalc {
                                         alpha = 0;
                                     else if (alpha > 1)
                                         alpha = 1;
-                                    afr = afrStock * (1 - alpha) + afrWb * alpha;
+                                    afrEff = afrStock * (1 - alpha) + afrWb * alpha;
                                 }
-                                boolean flag = isClosed ? (afrMin <= afr && afr <= afrMaxCl) : ((afr <= afrMaxOl || throttle >= thrtlMin) && afr <= afrMaxOl);
+
+                                boolean flag = isClosed ? (afrMin <= afrEff && afrEff <= afrMaxCl) : ((afrEff <= afrMaxOl || throttle >= thrtlMin) && afrEff <= afrMaxOl);
                                 if (flag && rpmMin <= rpm && ffbMin <= ffb && ffb <= ffbMax && iat <= iatMax) {
                                     removed = false;
                                     if (!fullTimeOl && isClosed)
@@ -480,9 +486,12 @@ public class VECalc extends ACompCalc {
                                     logDataTable.setValueAt(iat, row, 1);
                                     logDataTable.setValueAt(Double.valueOf(flds[logMpColIdx]), row, 2);
                                     logDataTable.setValueAt(ffb, row, 3);
-                                    logDataTable.setValueAt(afr, row, 4);
-                                    logDataTable.setValueAt(Double.valueOf(flds[logMafColIdx]), row, 5);
-                                    logDataTable.setValueAt(Double.valueOf(flds[logSdColIdx]), row, 6);
+                                    logDataTable.setValueAt(afrStock, row, 4);
+                                    logDataTable.setValueAt(afrWb, row, 5);
+                                    logDataTable.setValueAt(afrEff, row, 6);
+                                    logDataTable.setValueAt(Double.valueOf(flds[logMafColIdx]), row, 7);
+                                    logDataTable.setValueAt(Double.valueOf(flds[logSdColIdx]), row, 8);
+                                    logDataTable.setValueAt(isClosed ? 1 : 0, row, 9);
                                     row += 1;
                                 }
                                 else
@@ -533,7 +542,7 @@ public class VECalc extends ACompCalc {
             else if (mpStr.contains("Rel") && sdStr.contains("Cobb"))
                 mapO = 14.7;
 
-            String rpmStr, iatStr, afrStr, mafStr, ffbStr;
+            String rpmStr, iatStr, afreStr, mafStr, ffbStr, clStr;
             LogData logData;
             xData = new HashMap<Double, HashMap<Double, ArrayList<LogData>>>();
             HashMap<Double, ArrayList<LogData>> yData;
@@ -543,10 +552,11 @@ public class VECalc extends ACompCalc {
                 iatStr = logDataTable.getValueAt(i, 1).toString();
                 mpStr  = logDataTable.getValueAt(i, 2).toString();
                 ffbStr = logDataTable.getValueAt(i, 3).toString();
-                afrStr = logDataTable.getValueAt(i, 4).toString();
-                mafStr = logDataTable.getValueAt(i, 5).toString();
-                sdStr  = logDataTable.getValueAt(i, 6).toString();
-                if (rpmStr.isEmpty() || mpStr.isEmpty() || iatStr.isEmpty() || afrStr.isEmpty() || mafStr.isEmpty() || ffbStr.isEmpty() || sdStr.isEmpty())
+                afreStr = logDataTable.getValueAt(i, 6).toString();
+                mafStr = logDataTable.getValueAt(i, 7).toString();
+                sdStr  = logDataTable.getValueAt(i, 8).toString();
+                clStr  = logDataTable.getValueAt(i, 9).toString();
+                if (rpmStr.isEmpty() || mpStr.isEmpty() || iatStr.isEmpty() || afreStr.isEmpty() || mafStr.isEmpty() || ffbStr.isEmpty() || sdStr.isEmpty())
                     continue;
                 logData = new LogData();
                 logData.mp = (Double.valueOf(mpStr) * mapG) + mapO;
@@ -560,7 +570,12 @@ public class VECalc extends ACompCalc {
                 logData.iat = Double.valueOf(iatStr);
                 logData.maf = Double.valueOf(mafStr);
                 logData.sd = Double.valueOf(sdStr);
-                logData.afr = Double.valueOf(afrStr);
+                logData.afr = Double.valueOf(afreStr);
+                try {
+                    logData.cl = Integer.parseInt(clStr);
+                } catch (Exception ex) {
+                    logData.cl = 0;
+                }
                 logData.ffb = Double.valueOf(ffbStr);
                 logData.sderr = ((logData.sd - logData.maf) / logData.maf) * 100.0;
                 if (Double.isNaN(trims.get(i)))
