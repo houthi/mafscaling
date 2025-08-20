@@ -106,6 +106,9 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     public static final String minWOTEnrichmentLabelText = "Min WOT Enrichment";
     public static final String wbo2RowOffsetLabelText = "Wideband AFR Row Offset";
     public static final String olClTransitionSkipRowsLabelText = "OL/CL Transition - #Rows to Skip";
+    public static final String afrMpSwitchLabelText = "WB AFR MP Switch";
+    public static final String afrRpmSwitchLabelText = "WB AFR RPM Switch";
+    public static final String afrSmoothLabelText = "WB AFR Blend Range";
     protected JTable columnsTable = null;
     protected JTextField thrtlAngleName = null;
     protected JTextField afLearningName = null;
@@ -142,6 +145,9 @@ abstract class ColumnsFiltersSelection implements ActionListener {
     protected JFormattedTextField olClTransitionSkipRowsField = null;
     protected JFormattedTextField maxAfrFilter = null;
     protected JFormattedTextField minAfrFilter = null;
+    protected JFormattedTextField afrMpSwitchFilter = null;
+    protected JFormattedTextField afrRpmSwitchFilter = null;
+    protected JFormattedTextField afrSmoothFilter = null;
     protected JFormattedTextField atmPressureFilter = null;
     protected JFormattedTextField maxIatFilter = null;
     protected JFormattedTextField maxDvdtFilter = null;
@@ -682,6 +688,27 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         wbo2RowOffsetField = addTextFilter(filtrow, intFmt);
         addDefaultButton(filtrow, "wbo2offset");
     }
+
+    protected void addAfrMpSwitchFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "MP where WB AFR starts to blend in");
+        addLabel(filtersPanel, ++filtrow, afrMpSwitchLabelText);
+        afrMpSwitchFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "wbswitchmp");
+    }
+
+    protected void addAfrRpmSwitchFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "RPM where WB AFR starts to blend in");
+        addLabel(filtersPanel, ++filtrow, afrRpmSwitchLabelText);
+        afrRpmSwitchFilter = addTextFilter(filtrow, intFmt);
+        addDefaultButton(filtrow, "wbswitchrpm");
+    }
+
+    protected void addAfrSmoothFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Blend transition range for switching Stock/WB AFR");
+        addLabel(filtersPanel, ++filtrow, afrSmoothLabelText);
+        afrSmoothFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "wbsmooth");
+    }
     
     protected void addOLCLTransitionSkipRowsFilter() {
         // OL/CL Transition skip rows
@@ -744,7 +771,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         return current;
     }
 
-    private void addCommentLabel(JPanel panel, int row, int colspan, String text) {
+    protected void addCommentLabel(JPanel panel, int row, int colspan, String text) {
         JLabel label = new JLabel(text);
         GridBagConstraints gbc_label = new GridBagConstraints();
         gbc_label.anchor = GridBagConstraints.WEST;
@@ -756,7 +783,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         panel.add(label, gbc_label);
     }
     
-    private void addLabel(JPanel panel, int row, String text) {
+    protected void addLabel(JPanel panel, int row, String text) {
         JLabel label = new JLabel(text);
         GridBagConstraints gbc_label = new GridBagConstraints();
         gbc_label.anchor = GridBagConstraints.EAST;
@@ -766,7 +793,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         panel.add(label, gbc_label);
     }
     
-    private void addNote(JPanel panel, int row, int colspan, String note) {
+    protected void addNote(JPanel panel, int row, int colspan, String note) {
         JEditorPane label = createWrapLabel(note);
         GridBagConstraints gbc_label = new GridBagConstraints();
         gbc_label.anchor = GridBagConstraints.WEST;
@@ -821,7 +848,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         columnsPanel.add(button, gbc_button);
     }
 
-    private JFormattedTextField addTextFilter(int row, NumberFormat format) {
+    protected JFormattedTextField addTextFilter(int row, NumberFormat format) {
         JFormattedTextField textField = new JFormattedTextField(format);
         textField.setColumns(6);
         textField.setBackground(Color.WHITE);
@@ -872,7 +899,7 @@ abstract class ColumnsFiltersSelection implements ActionListener {
         return flag;
     }
     
-    private void addDefaultButton(int row, String action) {
+    protected void addDefaultButton(int row, String action) {
         JButton button = new JButton("default");
         GridBagConstraints gbc_button = new GridBagConstraints();
         gbc_button.anchor = GridBagConstraints.WEST;

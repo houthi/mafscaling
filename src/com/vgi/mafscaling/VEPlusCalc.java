@@ -64,9 +64,9 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.util.ShapeUtilities;
 
-public class VECalc extends ACompCalc {
+public class VEPlusCalc extends ACompCalc {
     private static final long serialVersionUID = -6288885401403089256L;
-    private static final Logger logger = Logger.getLogger(VECalc.class);
+    private static final Logger logger = Logger.getLogger(VEPlusCalc.class);
     
     class LogData {
         public double rpm = 0;
@@ -124,7 +124,7 @@ public class VECalc extends ACompCalc {
     private ArrayList<Double> trims = new ArrayList<Double>();
     private HashMap<Double, HashMap<Double, ArrayList<LogData>>> xData = null;
 
-    public VECalc(int tabPlacement) {
+    public VEPlusCalc(int tabPlacement) {
         super(tabPlacement);
         origTableName = "Current VE table";
         newTableName = "New VE table";
@@ -305,7 +305,7 @@ public class VECalc extends ACompCalc {
     
     protected String usage() {
         ResourceBundle bundle;
-        bundle = ResourceBundle.getBundle("com.vgi.mafscaling.vecalc");
+        bundle = ResourceBundle.getBundle("com.vgi.mafscaling.veplus");
         return bundle.getString("usage"); 
     }
 
