@@ -46,6 +46,7 @@ public class MafScaling {
     private static final String LCTabName = "<html>Load Comp</html>";
     private static final String MITabName = "<html>MAF IAT Comp</html>";
     private static final String VETabName = "<html>MAF VE Calc</html>";
+    private static final String VPTabName = "<html>VE+</html>";
     private static final String VCTabName = "<html>WOT Best VVT</html>";
     private static final String LSTabName = "<html>Log Stats</html>";
     private static final String LVTabName = "<html>Log View</html>";
@@ -156,6 +157,10 @@ public class MafScaling {
         JTabbedPane ve = new VECalc(JTabbedPane.LEFT);
         ve.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.add(ve, VETabName);
+
+        JTabbedPane vp = new VEPlus(JTabbedPane.LEFT);
+        vp.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+        tabbedPane.add(vp, VPTabName);
 
         JTabbedPane vc = new VVTCalc(JTabbedPane.LEFT);
         vc.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
