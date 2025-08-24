@@ -22,12 +22,13 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JEditorPane;
+import javax.swing.JFormattedTextField;
+import javax.swing.JSpinner;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -38,32 +39,45 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
     private JScrollPane pane = null;
     JPanel selectionPanel = null;
     private String[] columns = null;
-    private boolean isOl = true;
+    private boolean isFullOl = false;
+    private boolean mafMode = true;
+    private JFormattedTextField maxAfrWbFilter = null;
+    private JFormattedTextField minAfrWbFilter = null;
+    private JFormattedTextField maxAfrClFilter = null;
+    private JFormattedTextField minAfrClFilter = null;
+    private JSpinner clStatusFilter = null;
+    private JSpinner olStatusFilter = null;
+    private JFormattedTextField olThrtlMinimumFilter = null;
+
+    public VEColumnsFiltersSelection() {
+        this(true);
+    }
+
+    public VEColumnsFiltersSelection(boolean mafMode) {
+        this.mafMode = mafMode;
+    }
     
     public boolean getUserSettings(String[] cols) {
         columns = cols;
         createScrollPane();
-
-        final JComboBox<String> clOlSelection = new JComboBox<String>(new String [] { "Open Loop", "Closed Loop" });
-        clOlSelection.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                if(e.getStateChange() == ItemEvent.SELECTED) {
-                    isOl = (clOlSelection.getSelectedIndex() == 0? true: false);
-                    selectionPanel.remove(columnsPanel);
-                    selectionPanel.remove(filtersPanel);
-                    createColumnsPanel(columns);
-                    createFiltersPanel();
-                    selectionPanel.add(columnsPanel);
-                    selectionPanel.add(filtersPanel);
-                    selectionPanel.revalidate();
-                    selectionPanel.repaint();
-                    pane.setPreferredSize(new Dimension(windowWidth, windowHeight));
-                    SwingUtilities.invokeLater(new Runnable() { public void run() { pane.getVerticalScrollBar().setValue(0); } });
-                }
+        final JComboBox<String> modeSelection = new JComboBox<String>(new String [] { "CL/OL", "Full Time OL" });
+        modeSelection.addItemListener(e -> {
+            if(e.getStateChange() == ItemEvent.SELECTED) {
+                isFullOl = (modeSelection.getSelectedIndex() == 1);
+                selectionPanel.remove(columnsPanel);
+                selectionPanel.remove(filtersPanel);
+                createColumnsPanel(columns);
+                createFiltersPanel();
+                selectionPanel.add(columnsPanel);
+                selectionPanel.add(filtersPanel);
+                selectionPanel.revalidate();
+                selectionPanel.repaint();
+                pane.setPreferredSize(new Dimension(windowWidth, windowHeight));
+                SwingUtilities.invokeLater(() -> pane.getVerticalScrollBar().setValue(0));
             }
         });
-        
-        JComponent[] inputs = new JComponent[] {clOlSelection, pane};
+
+        JComponent[] inputs = new JComponent[] {modeSelection, pane};
         // bring scroll pane to the start
         SwingUtilities.invokeLater(new Runnable() { public void run() { pane.getVerticalScrollBar().setValue(0); } });
         
@@ -93,11 +107,9 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
     }
     
     protected void addColSelection() {
-        if (isOl) {
-            addWidebandAFRColSelection();
-        }
-        else {
-            addStockAFRColSelection();
+        addWidebandAFRColSelection();
+        addStockAFRColSelection();
+        if (!isFullOl) {
             addAFCorrectionColSelection();
             addAFLearningColSelection();
         }
@@ -106,28 +118,43 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         addThrottleAngleColSelection();
         addManifoldPressureColSelection();
         addFFBColSelection();
-        addClOlStatusColSelection();
-        addMAFColSelection();
+        if (!isFullOl)
+            addClOlStatusColSelection();
+        if (mafMode)
+            addMAFColSelection();
         addVEFlowColSelection();
     }
     
     protected void addFilterSelection() {
         addThrottleChangeMaximumFilter();
         thrtlChangeMaxFilter.setValue(Config.getVEThrottleChangeMaxValue());
-        if (isOl) {
-            addThrottleMinimumFilter();
-            thrtlMinimumFilter.setValue(Config.getVEThrottleMinimumValue());
-            addAFRMaximumFilter();
-            maxAfrFilter.setText(String.valueOf(Config.getVEOlAfrMaximumValue()));
+        addThrottleMinimumFilter();
+        thrtlMinimumFilter.setValue(Config.getVEThrottleMinimumValue());
+        if (!isFullOl) {
+            addOlThrottleMinimumFilter();
+            olThrtlMinimumFilter.setText(String.valueOf(Config.getVEOlThrottleMinimumValue()));
         }
-        else {
-            addAFRMaximumFilter();
-            maxAfrFilter.setText(String.valueOf(Config.getVEClAfrMaximumValue()));
-            addAFRMinimumFilter();
-            minAfrFilter.setText(String.valueOf(Config.getVEAfrMinimumValue()));
+        addWbAFRMaximumFilter();
+        maxAfrWbFilter.setText(String.valueOf(Config.getVEOlAfrMaximumValue()));
+        addWbAFRMinimumFilter();
+        minAfrWbFilter.setText(String.valueOf(Config.getVEOlAfrMinimumValue()));
+        if (isFullOl) {
+            addStockAFRMaximumFilter();
+            maxAfrClFilter.setText(String.valueOf(Config.getVEClAfrMaximumValue()));
+            addStockAFRMinimumFilter();
+            minAfrClFilter.setText(String.valueOf(Config.getVEClAfrMinimumValue()));
+            addAfrMpSwitchFilter();
+            afrMpSwitchFilter.setText(String.valueOf(Config.getVEWbAfrMpSwitch()));
+            addAfrRpmSwitchFilter();
+            afrRpmSwitchFilter.setText(String.valueOf(Config.getVEWbAfrRpmSwitch()));
+            addAfrSmoothFilter();
+            afrSmoothFilter.setText(String.valueOf(Config.getVEWbAfrSmooth()));
+        } else {
+            addClStatusFilter();
+            clStatusFilter.setValue(Config.getVEClStatusValue());
+            addOlStatusFilter();
+            olStatusFilter.setValue(Config.getVEOlStatusValue());
         }
-        addCLOLStatusFilter();
-        clolStatusFilter.setValue(Config.getVEClOlStatusValue());
         addIATMaximumFilter();
         maxIatFilter.setText(String.valueOf(Config.getVEIatMaximumValue()));
         addRPMMinimumFilter();
@@ -138,10 +165,8 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         maxFFBFilter.setText(String.valueOf(Config.getFFBMaximumValue()));
         addFFBMinimumFilter();
         minFFBFilter.setText(String.valueOf(Config.getFFBMinimumValue()));
-        if (isOl) {
-            addWideBandAFRRowOffsetFilter();
-            wbo2RowOffsetField.setText(String.valueOf(Config.getWBO2RowOffset()));
-        }
+        addWideBandAFRRowOffsetFilter();
+        wbo2RowOffsetField.setText(String.valueOf(Config.getWBO2RowOffset()));
         addCellHitCountMinimumFilter();
         minCellHitCountFilter.setText(String.valueOf(Config.getVEMinCellHitCount()));
         addCorrectionAppliedValue();
@@ -152,14 +177,12 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
                 JEditorPane label = (JEditorPane)c;
                 if (label.getText().startsWith("Remove data where Throttle Input is below"))
                     label.setText(label.getText() + " (*** works with AFR Maximum filter)");
-                else if (isOl && label.getText().startsWith("Remove data where AFR is above"))
+                else if (label.getText().startsWith("Remove data where AFR is above"))
                     label.setText(label.getText() + "(*** works with Throttle Input Minimum filter)");
                 else if (label.getText().startsWith("Remove data where RPM is below"))
                     label.setText(label.getText() + " (hint: check min RPM in SD table (y-axis)");
                 else if (label.getText().startsWith("Remove data where Manifold Pressure is below"))
                     label.setText(label.getText() + " (hint: check min MP in SD table (x-axis)");
-                else if (label.getText().equals(clolStatusLabelText))
-                    label.setText(clolStatusLabelText + " *");
             }
         }
     }
@@ -169,30 +192,27 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         String value;
         String colName;
         
-        Config.veOpenLoop(isOl);
-
-        if (isOl) {
-            // Wideband AFR
-            value = wbAfrName.getText().trim();
-            colName = wbAfrLabelText;
-            if (value.isEmpty()) {
-                ret = false;
-                error.append("\"").append(colName).append("\" column must be specified\n");
-            }
-            else
-                Config.setWidebandAfrColumnName(value);
+        // Wideband AFR
+        value = wbAfrName.getText().trim();
+        colName = wbAfrLabelText;
+        if (value.isEmpty()) {
+            ret = false;
+            error.append("\"").append(colName).append("\" column must be specified\n");
         }
-        else {
-            // Stock AFR
-            value = stockAfrName.getText().trim();
-            colName = stockAfrLabelText;
-            if (value.isEmpty()) {
-                ret = false;
-                error.append("\"").append(colName).append("\" column must be specified\n");
-            }
-            else
-                Config.setAfrColumnName(value);
+        else
+            Config.setWidebandAfrColumnName(value);
 
+        // Stock AFR
+        value = stockAfrName.getText().trim();
+        colName = stockAfrLabelText;
+        if (value.isEmpty()) {
+            ret = false;
+            error.append("\"").append(colName).append("\" column must be specified\n");
+        }
+        else
+            Config.setAfrColumnName(value);
+
+        if (!isFullOl) {
             // AFR Learning
             value = afLearningName.getText().trim();
             colName = afLearningLabelText;
@@ -202,7 +222,7 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
             }
             else
                 Config.setAfLearningColumnName(value);
-            
+
             // AFR Correction
             value = afCorrectionName.getText().trim();
             colName = afCorrectionLabelText;
@@ -212,7 +232,6 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
             }
             else
                 Config.setAfCorrectionColumnName(value);
-            
         }
         
         // Engine Speed
@@ -265,25 +284,31 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         else
             Config.setFinalFuelingBaseColumnName(value);
 
-        // CL/OL Status
-        value = clolStatusName.getText().trim();
-        colName = clolStatusLabelText;
-        if (value.isEmpty()) {
-            ret = false;
-            error.append("\"").append(colName).append("\" column must be specified\n");
+        if (!isFullOl) {
+            // CL/OL Status
+            value = clolStatusName.getText().trim();
+            colName = clolStatusLabelText;
+            if (value.isEmpty()) {
+                ret = false;
+                error.append("\"").append(colName).append("\" column must be specified\n");
+            }
+            else
+                Config.setClOlStatusColumnName(value);
         }
-        else
-            Config.setClOlStatusColumnName(value);
 
-        // MAF
-        value = mafName.getText().trim();
-        colName = mafLabelText;
-        if (value.isEmpty()) {
-            ret = false;
-            error.append("\"").append(colName).append("\" column must be specified\n");
+        if (mafMode) {
+            // MAF
+            value = mafName.getText().trim();
+            colName = mafLabelText;
+            if (value.isEmpty()) {
+                ret = false;
+                error.append("\"").append(colName).append("\" column must be specified\n");
+            }
+            else
+                Config.setMassAirflowColumnName(value);
+        } else {
+            Config.setMassAirflowColumnName(Config.NO_NAME);
         }
-        else
-            Config.setMassAirflowColumnName(value);
 
         // VE Flow
         value = veFlowName.getText().trim();
@@ -298,26 +323,30 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         // Throttle Change % Maximum
         Config.setVEThrottleChangeMaxValue(Integer.valueOf(thrtlChangeMaxFilter.getValue().toString()));
 
-        if (isOl) {
-            // Throttle Minimum Input
-            Config.setVEThrottleMinimumValue(Integer.valueOf(thrtlMinimumFilter.getText()));
-            
-            // AFR Maximum
-            Config.setVEOlAfrMaximumValue(Double.valueOf(maxAfrFilter.getText()));
-            
-            // WBO2 Row Offset
-            Config.setWBO2RowOffset(Integer.valueOf(wbo2RowOffsetField.getText()));
+        // Throttle Minimum Input
+        Config.setVEThrottleMinimumValue(Integer.valueOf(thrtlMinimumFilter.getText()));
+        if (!isFullOl)
+            Config.setVEOlThrottleMinimumValue(Integer.valueOf(olThrtlMinimumFilter.getText()));
+
+        // AFR filters
+        Config.setVEOlAfrMaximumValue(Double.valueOf(maxAfrWbFilter.getText()));
+        Config.setVEOlAfrMinimumValue(Double.valueOf(minAfrWbFilter.getText()));
+        if (isFullOl) {
+            Config.setVEClAfrMaximumValue(Double.valueOf(maxAfrClFilter.getText()));
+            Config.setVEClAfrMinimumValue(Double.valueOf(minAfrClFilter.getText()));
         }
-        else {
-            // AFR Maximum
-            Config.setVEClAfrMaximumValue(Double.valueOf(maxAfrFilter.getText()));
-            
-            // AFR Minimum
-            Config.setVEAfrMinimumValue(Double.valueOf(minAfrFilter.getText()));
+
+        // WBO2 Row Offset
+        Config.setWBO2RowOffset(Integer.valueOf(wbo2RowOffsetField.getText()));
+
+        if (isFullOl) {
+            Config.setVEWbAfrMpSwitch(Double.valueOf(afrMpSwitchFilter.getText()));
+            Config.setVEWbAfrRpmSwitch(Integer.valueOf(afrRpmSwitchFilter.getText()));
+            Config.setVEWbAfrSmooth(Double.valueOf(afrSmoothFilter.getText()));
+        } else {
+            Config.setVEClStatusValue(Integer.valueOf(clStatusFilter.getValue().toString()));
+            Config.setVEOlStatusValue(Integer.valueOf(olStatusFilter.getValue().toString()));
         }
-        
-        // CL/OL Status
-        Config.setVEClOlStatusValue(Integer.valueOf(clolStatusFilter.getValue().toString()));
         
         // IAT filter
         Config.setVEIatMaximumValue(Double.valueOf(maxIatFilter.getText()));
@@ -337,8 +366,59 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
         
         // Correction applied
         Config.setVECorrectionAppliedValue(Integer.valueOf(correctionAppliedValue.getValue().toString()));
-        
+
+        Config.veFullTimeOl(isFullOl);
+
         return ret;
+    }
+
+    private void addWbAFRMaximumFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Remove data where WB AFR is above the specified maximum");
+        addLabel(filtersPanel, ++filtrow, "WB AFR Maximum");
+        maxAfrWbFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "maxafrwb");
+    }
+
+    private void addWbAFRMinimumFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Remove data where WB AFR is below the specified minimum");
+        addLabel(filtersPanel, ++filtrow, "WB AFR Minimum");
+        minAfrWbFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "minafrwb");
+    }
+
+    private void addStockAFRMaximumFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Remove data where Stock AFR is above the specified maximum");
+        addLabel(filtersPanel, ++filtrow, "Stock AFR Maximum");
+        maxAfrClFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "maxafrstock");
+    }
+
+    private void addStockAFRMinimumFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Remove data where Stock AFR is below the specified minimum");
+        addLabel(filtersPanel, ++filtrow, "Stock AFR Minimum");
+        minAfrClFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "minafrstock");
+    }
+
+    private void addClStatusFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Logged value indicating Closed Loop");
+        addLabel(filtersPanel, ++filtrow, "CL Status Value");
+        clStatusFilter = addSpinnerFilter(filtrow, Config.getVEClStatusValue(), -1, 10, 1);
+        addDefaultButton(filtrow, "clstatus");
+    }
+
+    private void addOlStatusFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Logged value indicating Open Loop");
+        addLabel(filtersPanel, ++filtrow, "OL Status Value");
+        olStatusFilter = addSpinnerFilter(filtrow, Config.getVEOlStatusValue(), -1, 10, 1);
+        addDefaultButton(filtrow, "olstatus");
+    }
+
+    private void addOlThrottleMinimumFilter() {
+        addNote(filtersPanel, ++filtrow, 3, "Remove OL data where Throttle Input is below the specified minimum");
+        addLabel(filtersPanel, ++filtrow, "OL Throttle Minimum");
+        olThrtlMinimumFilter = addTextFilter(filtrow, doubleFmt);
+        addDefaultButton(filtrow, "minolthrtl");
     }
     
     protected boolean processDefaultButton(ActionEvent e) {
@@ -354,20 +434,30 @@ public class VEColumnsFiltersSelection extends ColumnsFiltersSelection {
             maxFFBFilter.setText(Config.DefaultFFBMaximum);
         else if ("minffb".equals(e.getActionCommand()))
             minFFBFilter.setText(Config.DefaultFFBMinimum);
-        else if ("clolstatus".equals(e.getActionCommand()))
-            clolStatusFilter.setValue(Integer.valueOf(Config.DefaultClOlStatusValue));
+        else if ("clstatus".equals(e.getActionCommand()))
+            clStatusFilter.setValue(Integer.valueOf(Config.DefaultVEClStatusValue));
+        else if ("olstatus".equals(e.getActionCommand()))
+            olStatusFilter.setValue(Integer.valueOf(Config.DefaultVEOlStatusValue));
+        else if ("minolthrtl".equals(e.getActionCommand()))
+            olThrtlMinimumFilter.setValue(Integer.valueOf(Config.DefaultVEOlThrottleMinimum));
         else if ("minthrtl".equals(e.getActionCommand()))
             thrtlMinimumFilter.setValue(Integer.valueOf(Config.DefaultVEThrottleMinimum));
-        else if ("maxafr".equals(e.getActionCommand())) {
-            if (isOl)
-                maxAfrFilter.setText(Config.DefaultVEOlAfrMaximum);
-            else
-                maxAfrFilter.setText(Config.DefaultVEClAfrMaximum);
-        }
-        else if ("minafr".equals(e.getActionCommand()))
-            minAfrFilter.setText(Config.DefaultVEAfrMinimum);
+        else if ("maxafrwb".equals(e.getActionCommand()))
+            maxAfrWbFilter.setText(Config.DefaultVEOlAfrMaximum);
+        else if ("minafrwb".equals(e.getActionCommand()))
+            minAfrWbFilter.setText(Config.DefaultVEOlAfrMinimum);
+        else if ("maxafrstock".equals(e.getActionCommand()))
+            maxAfrClFilter.setText(Config.DefaultVEClAfrMaximum);
+        else if ("minafrstock".equals(e.getActionCommand()))
+            minAfrClFilter.setText(Config.DefaultVEClAfrMinimum);
         else if ("wbo2offset".equals(e.getActionCommand()))
             wbo2RowOffsetField.setText(Config.DefaultWBO2RowOffset);
+        else if ("wbswitchmp".equals(e.getActionCommand()))
+            afrMpSwitchFilter.setText(Config.DefaultVEWbAfrMpSwitch);
+        else if ("wbswitchrpm".equals(e.getActionCommand()))
+            afrRpmSwitchFilter.setText(Config.DefaultVEWbAfrRpmSwitch);
+        else if ("wbsmooth".equals(e.getActionCommand()))
+            afrSmoothFilter.setText(Config.DefaultVEWbAfrSmooth);
         else if ("minhitcnt".equals(e.getActionCommand()))
             minCellHitCountFilter.setText(Config.DefaultVEMinCellHitCount);
         else if ("corrapply".equals(e.getActionCommand()))

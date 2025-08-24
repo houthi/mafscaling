@@ -48,6 +48,9 @@ public class Config {
     public static final String DefaultAtmPressure = "14.7";
     public static final String DefaultVEThrottleChangeMax = "4";
     public static final String DefaultVEThrottleMinimum = "5";
+    public static final String DefaultVEClStatusValue = "0";
+    public static final String DefaultVEOlStatusValue = "1";
+    public static final String DefaultVEOlThrottleMinimum = "20";
     public static final String DefaultIsLoadCompInRatio = "false";
     public static final String DefaultIsMafIatInRatio = "false";    
     public static final String DefaultCLMinCellHitCount = "30";
@@ -79,6 +82,13 @@ public class Config {
     public static final String DefaultVEOlAfrMaximum = "16.0";
     public static final String DefaultVEClAfrMaximum = "15.0";
     public static final String DefaultVEAfrMinimum = "13.7";
+    public static final String DefaultVEOlAfrMinimum = "10.0";
+    public static final String DefaultVEClAfrMinimum = "13.7";
+    public static final String DefaultVEFullTimeOL = "false";
+    // Default thresholds for blending stock and wideband AFR when Full Time OL mode is enabled
+    public static final String DefaultVEWbAfrMpSwitch = "1.0";   // MP at which WB AFR blend starts
+    public static final String DefaultVEWbAfrRpmSwitch = "3000"; // RPM at which WB AFR blend starts
+    public static final String DefaultVEWbAfrSmooth = "0.3";    // Range over which blend transitions
     public static final String DefaultLoadMinimum = "0.2";
     public static final String DefaultDvDtMaximum = "0.7";
     public static final String DefaultMIAfrMaximum = "16.0";
@@ -88,7 +98,7 @@ public class Config {
     private static final String CFG_FILE = "config.xml";
     public static final String NO_NAME = "#$#";
     private static Properties props = new Properties();
-    public static boolean veOpenLoop = true;
+    public static boolean veFullTimeOl = false;
 
     public static String getProperty(String name) {
         return props.getProperty(name, "");
@@ -470,12 +480,20 @@ public class Config {
         props.setProperty("VECorrectionApplied", Integer.toString(v));
     }
 
-    public static int getVEClOlStatusValue() {
-        return Integer.parseInt(props.getProperty("VEClOlStatusValue", DefaultClOlStatusValue));
+    public static int getVEClStatusValue() {
+        return Integer.parseInt(props.getProperty("VEClStatusValue", DefaultVEClStatusValue));
     }
 
-    public static void setVEClOlStatusValue(int v) {
-        props.setProperty("VEClOlStatusValue", Integer.toString(v));
+    public static void setVEClStatusValue(int v) {
+        props.setProperty("VEClStatusValue", Integer.toString(v));
+    }
+
+    public static int getVEOlStatusValue() {
+        return Integer.parseInt(props.getProperty("VEOlStatusValue", DefaultVEOlStatusValue));
+    }
+
+    public static void setVEOlStatusValue(int v) {
+        props.setProperty("VEOlStatusValue", Integer.toString(v));
     }
     
     public static int getVEThrottleChangeMaxValue() {
@@ -492,6 +510,14 @@ public class Config {
 
     public static void setVEThrottleMinimumValue(int v) {
         props.setProperty("VEThrottleMinimum", Integer.toString(v));
+    }
+
+    public static int getVEOlThrottleMinimumValue() {
+        return Integer.parseInt(props.getProperty("VEOlThrottleMinimumValue", DefaultVEOlThrottleMinimum));
+    }
+
+    public static void setVEOlThrottleMinimumValue(int v) {
+        props.setProperty("VEOlThrottleMinimumValue", Integer.toString(v));
     }
 
     public static int getVEMinCellHitCount() {
@@ -540,6 +566,30 @@ public class Config {
 
     public static void setWBO2RowOffset(int v) {
         props.setProperty("WBO2RowOffset", Integer.toString(v));
+    }
+
+    public static double getVEWbAfrMpSwitch() {
+        return Double.parseDouble(props.getProperty("VEWbAfrMpSwitch", DefaultVEWbAfrMpSwitch));
+    }
+
+    public static void setVEWbAfrMpSwitch(double v) {
+        props.setProperty("VEWbAfrMpSwitch", Double.toString(v));
+    }
+
+    public static int getVEWbAfrRpmSwitch() {
+        return Integer.parseInt(props.getProperty("VEWbAfrRpmSwitch", DefaultVEWbAfrRpmSwitch));
+    }
+
+    public static void setVEWbAfrRpmSwitch(int v) {
+        props.setProperty("VEWbAfrRpmSwitch", Integer.toString(v));
+    }
+
+    public static double getVEWbAfrSmooth() {
+        return Double.parseDouble(props.getProperty("VEWbAfrSmooth", DefaultVEWbAfrSmooth));
+    }
+
+    public static void setVEWbAfrSmooth(double v) {
+        props.setProperty("VEWbAfrSmooth", Double.toString(v));
     }
 
     public static int getOLCLTransitionSkipRows() {
@@ -726,6 +776,22 @@ public class Config {
         props.setProperty("VEClAfrMaximum", Double.toString(v));
     }
 
+    public static double getVEOlAfrMinimumValue() {
+        return Double.parseDouble(props.getProperty("VEOlAfrMinimum", DefaultVEOlAfrMinimum));
+    }
+
+    public static void setVEOlAfrMinimumValue(double v) {
+        props.setProperty("VEOlAfrMinimum", Double.toString(v));
+    }
+
+    public static double getVEClAfrMinimumValue() {
+        return Double.parseDouble(props.getProperty("VEClAfrMinimum", DefaultVEClAfrMinimum));
+    }
+
+    public static void setVEClAfrMinimumValue(double v) {
+        props.setProperty("VEClAfrMinimum", Double.toString(v));
+    }
+
     public static double getVEAfrMinimumValue() {
         return Double.parseDouble(props.getProperty("VEAfrMinimum", DefaultVEAfrMinimum));
     }
@@ -821,14 +887,15 @@ public class Config {
     public static void setVVT2RPMColumn(String s) {
         props.setProperty("VVT2RPMColumn", s);
     }
-    
-    public static boolean veOpenLoop() {
-        return veOpenLoop;
+
+    public static boolean veFullTimeOl() {
+        return veFullTimeOl;
+    }
+
+    public static void veFullTimeOl(boolean f) {
+        veFullTimeOl = f;
     }
     
-    public static void veOpenLoop(boolean f) {
-        veOpenLoop = f;
-    }
     
     public static String getEncoding() {
         return props.getProperty("Encoding", DefaultEncoding);
