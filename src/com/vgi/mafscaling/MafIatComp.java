@@ -372,12 +372,13 @@ public class MafIatComp extends ACompCalc {
                             else if (row <= 2 || Math.abs(ppThrottle - throttle) <= thrtlMaxChange2) {
                                 // Filters
                                 trims = Double.valueOf(flds[logAfLearningColIdx]) + Double.valueOf(flds[logAfCorrectionColIdx]);
-                                if (flds[logClOlStatusColIdx] == "on")
+                                String clStr = flds[logClOlStatusColIdx];
+                                if (clStr.equalsIgnoreCase("on"))
                                     clol = 0;
-                                else if (flds[logClOlStatusColIdx] == "off")
+                                else if (clStr.equalsIgnoreCase("off"))
                                     clol = 1;
                                 else
-                                    clol = (int)Utils.parseValue(flds[logClOlStatusColIdx]);
+                                    clol = (int)Utils.parseValue(clStr);
                                 if (clValue == clol) {
                                     afr = Double.valueOf(flds[logAfrColIdx]);
                                     corr = (100.0 + trims) / 100.0;
